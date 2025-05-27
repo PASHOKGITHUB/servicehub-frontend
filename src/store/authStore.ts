@@ -6,6 +6,23 @@ import { loginUser, registerUser, logoutUser, getCurrentUser } from '@/instance/
 import Cookies from 'js-cookie';
 import { User } from '@/domain/entities/Auth/User';
 
+// Type definitions for better error handling
+type APIError = {
+  message: string;
+  response?: {
+    status: number;
+    data?: unknown;
+  };
+};
+
+type DebugLogData = {
+  timestamp: string;
+  component: string;
+  message: string;
+  data: unknown;
+  url: string;
+};
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
@@ -24,9 +41,9 @@ interface AuthState {
 }
 
 // Helper function for debug logging
-const debugLog = (message: string, data?: any) => {
+const debugLog = (message: string, data?: unknown) => {
   const timestamp = new Date().toISOString();
-  const logEntry = {
+  const logEntry: DebugLogData = {
     timestamp,
     component: 'AuthStore',
     message,
@@ -37,7 +54,7 @@ const debugLog = (message: string, data?: any) => {
   console.log(`🏪 [${timestamp}] AuthStore: ${message}`, data);
   
   if (typeof window !== 'undefined') {
-    const existingLogs = JSON.parse(localStorage.getItem('auth-debug-logs') || '[]');
+    const existingLogs = JSON.parse(localStorage.getItem('auth-debug-logs') || '[]') as DebugLogData[];
     existingLogs.push(logEntry);
     
     if (existingLogs.length > 50) {
@@ -133,7 +150,8 @@ export const useAuthStore = create<AuthState>()(
           
           debugLog('✅ Initialization completed successfully');
           
-        } catch (error: any) {
+        } catch (err: unknown) {
+          const error = err as APIError;
           debugLog('❌ Failed to load user during initialization', { 
             error: error.message,
             status: error.response?.status 
@@ -181,7 +199,8 @@ export const useAuthStore = create<AuthState>()(
           
           debugLog('✅ Login state updated successfully');
           
-        } catch (error: any) {
+        } catch (err: unknown) {
+          const error = err as APIError;
           debugLog('❌ Login failed', { error: error.message });
           
           set({ 
@@ -191,7 +210,7 @@ export const useAuthStore = create<AuthState>()(
             user: null
           });
           
-          throw error;
+          throw err;
         }
       },
 
@@ -224,7 +243,8 @@ export const useAuthStore = create<AuthState>()(
           
           debugLog('✅ Register state updated successfully');
           
-        } catch (error: any) {
+        } catch (err: unknown) {
+          const error = err as APIError;
           debugLog('❌ Register failed', { error: error.message });
           
           set({ 
@@ -234,7 +254,7 @@ export const useAuthStore = create<AuthState>()(
             user: null
           });
           
-          throw error;
+          throw err;
         }
       },
 
@@ -294,7 +314,8 @@ export const useAuthStore = create<AuthState>()(
             error: null
           });
           
-        } catch (error: any) {
+        } catch (err: unknown) {
+          const error = err as APIError;
           debugLog('❌ LoadUser: API failed', { 
             error: error.message,
             status: error.response?.status 
@@ -342,7 +363,7 @@ export const useAuthStore = create<AuthState>()(
 
 // 🔥 EXPORT DEBUG UTILITIES
 if (typeof window !== 'undefined') {
-  (window as any).debugAuthStore = {
+  (window as Window & { debugAuthStore?: unknown }).debugAuthStore = {
     getState: () => {
       const state = useAuthStore.getState();
       console.log('🏪 Current Auth Store State:', {

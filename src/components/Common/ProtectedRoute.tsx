@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,7 +15,7 @@ interface ProtectedRouteProps {
 }
 
 // Helper function for debug logging
-const debugLog = (message: string, data?: any) => {
+const debugLog = (message: string, data?: unknown) => {
   const timestamp = new Date().toISOString();
   console.log(`🛡️ [${timestamp}] ProtectedRoute: ${message}`, data);
 };
@@ -48,10 +48,10 @@ const ProtectedRoute = ({
     };
 
     initializeAuth();
-  }, [isInitialized, initialize]);
+  }, [isInitialized, initialize, isAuthenticated, user, allowedRoles]);
 
   // 🔥 STEP 2: Handle redirects after auth check is complete
-  useEffect(() => {
+  const handleRedirects = useCallback(() => {
     if (!hasCheckedAuth || !isInitialized) {
       debugLog('⏳ Waiting for auth check to complete...');
       return;
@@ -102,8 +102,11 @@ const ProtectedRoute = ({
     }
 
     debugLog('✅ All auth checks passed');
-
   }, [hasCheckedAuth, isInitialized, isLoading, isAuthenticated, user, allowedRoles, router]);
+
+  useEffect(() => {
+    handleRedirects();
+  }, [handleRedirects]);
 
   // 🔥 STEP 3: Render appropriate UI based on auth state
 
@@ -171,7 +174,7 @@ const ProtectedRoute = ({
             <Mail className="w-16 h-16 text-yellow-500 mx-auto mb-6" />
             <h2 className="text-2xl font-bold mb-4 text-gray-800">Email Verification Required</h2>
             <p className="text-gray-600 mb-6 leading-relaxed">
-              We've sent a verification link to <strong>{user.email}</strong>. 
+              We&apos;ve sent a verification link to <strong>{user.email}</strong>. 
               Please check your inbox and click the link to verify your account.
             </p>
             

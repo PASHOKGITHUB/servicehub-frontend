@@ -5,10 +5,19 @@ import Cookies from "js-cookie";
 // Set base URL to match your backend server
 const baseURL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5000/api/v1';
 
+// Type definitions for better type safety
+type DebugLogData = {
+  timestamp: string;
+  component: string;
+  message: string;
+  data: unknown;
+  url: string;
+};
+
 // Helper function for debug logging
-const debugLog = (message: string, data?: any) => {
+const debugLog = (message: string, data?: unknown) => {
   const timestamp = new Date().toISOString();
-  const logEntry = {
+  const logEntry: DebugLogData = {
     timestamp,
     component: 'ApiClient',
     message,
@@ -19,7 +28,7 @@ const debugLog = (message: string, data?: any) => {
   console.log(`🌐 [${timestamp}] ApiClient: ${message}`, data);
   
   if (typeof window !== 'undefined') {
-    const existingLogs = JSON.parse(localStorage.getItem('auth-debug-logs') || '[]');
+    const existingLogs = JSON.parse(localStorage.getItem('auth-debug-logs') || '[]') as DebugLogData[];
     existingLogs.push(logEntry);
     
     if (existingLogs.length > 50) {
@@ -141,9 +150,15 @@ debugLog('ApiClient initialized', { baseURL });
 
 export default ApiClient;
 
+// Type definition for debug utilities
+interface DebugApiClientUtilities {
+  checkToken: () => string | null;
+  makeTestRequest: () => Promise<unknown>;
+}
+
 // 🔥 EXPORT DEBUG UTILITIES
 if (typeof window !== 'undefined') {
-  (window as any).debugApiClient = {
+  (window as Window & { debugApiClient?: DebugApiClientUtilities }).debugApiClient = {
     checkToken: () => {
       const token = getAuthToken();
       console.log('🔍 Current API Client token status:', {

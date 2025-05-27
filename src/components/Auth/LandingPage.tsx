@@ -235,7 +235,7 @@ const LandingPage = () => {
             onClick={() => router.push('/register')}
             className="bg-white text-blue-600 hover:bg-gray-100 text-base sm:text-lg px-6 sm:px-8 py-3 font-semibold w-full sm:w-auto max-w-xs mx-auto"
           >
-            Sign Up Now - It's Free!
+            Sign Up Now - It&apos;s Free!
           </Button>
         </div>
       </section>

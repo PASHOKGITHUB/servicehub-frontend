@@ -32,10 +32,10 @@ const EmailVerificationBanner = () => {
           toast.info('Check console for email preview link (development mode)');
         }
       }
-    } catch (error: any) {
-      const errorMessage = error?.message || 'Failed to send verification email';
-      toast.error(errorMessage);
-    } finally {
+    }  catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to send verification email';
+    toast.error(errorMessage);
+  }  finally {
       setIsResending(false);
     }
   };

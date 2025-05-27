@@ -1,11 +1,12 @@
-// src/instance/Auth.ts - FIXED COOKIE STORAGE ISSUE
+// src/instance/Auth.ts - FIXED TYPESCRIPT ERRORS WITH PROPER TYPES
 import { AxiosErrorResponse, EmailSendResponse, EmailVerificationResponse } from "@/domain/entities/Auth/Auth";
 import ApiClient from "@/lib/apiClient";
 import { LoginRequest, RegisterRequest, AuthResponse } from "@/domain/entities/Auth/Auth";
+import { User } from "@/domain/entities/Auth/User";
 import Cookies from "js-cookie";
 
 // Helper function for debug logging
-const debugLog = (message: string, data?: any) => {
+const debugLog = (message: string, data?: unknown) => {
   const timestamp = new Date().toISOString();
   console.log(`🔑 [${timestamp}] AuthInstance: ${message}`, data);
   
@@ -190,6 +191,11 @@ const removeToken = (): void => {
   }
 };
 
+// 🔧 FIXED: Proper response interface for getCurrentUser
+interface GetCurrentUserResponse {
+  user: User;
+}
+
 export const loginUser = async (payload: LoginRequest): Promise<AuthResponse> => {
   try {
     debugLog('🔑 Login request starting', { email: payload.email });
@@ -275,7 +281,8 @@ export const logoutUser = async (): Promise<void> => {
   }
 };
 
-export const getCurrentUser = async (): Promise<{ user: any }> => {
+// 🔧 FIXED: Using proper User type instead of any
+export const getCurrentUser = async (): Promise<GetCurrentUserResponse> => {
   try {
     debugLog('👤 GetCurrentUser request starting');
     
@@ -292,7 +299,7 @@ export const getCurrentUser = async (): Promise<{ user: any }> => {
       throw new Error('No authentication token found');
     }
     
-    const response = await ApiClient.get<{ data: { user: any } }>(`/auth/profile`);
+    const response = await ApiClient.get<{ data: GetCurrentUserResponse }>(`/auth/profile`);
     
     debugLog('✅ GetCurrentUser successful', {
       userEmail: response.data.data.user.email,
@@ -369,7 +376,7 @@ export const authTokenUtils = {
   getToken,
   storeToken,
   removeToken,
-  debugToken: () => {
+  debugToken: (): string | null => {
     const token = getToken();
     console.log('🔍 Current token status:', {
       hasToken: !!token,
@@ -380,7 +387,7 @@ export const authTokenUtils = {
     });
     return token;
   },
-  testCookies: () => {
+  testCookies: (): boolean => {
     // Test if cookies work at all
     const testValue = 'test_' + Date.now();
     Cookies.set('test_cookie', testValue);

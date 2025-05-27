@@ -5,7 +5,6 @@ import EmailVerificationBanner from '@/components/Common/EmailVerificationBanner
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useRouter } from 'next/navigation';
 import { 
   Calendar, 
   CreditCard, 
@@ -21,7 +20,6 @@ import {
 import { toast } from 'sonner';
 
 const UserDashboard = () => {
-  const router = useRouter();
   const { user } = useAuthStore();
 
   // Layout already handles authentication, so no need to check here
@@ -119,7 +117,7 @@ const UserDashboard = () => {
           Welcome back, {user.name.split(' ')[0]}!
         </h1>
         <p className="text-gray-600 text-sm sm:text-base">
-          Here's what's happening with your services today.
+          Here&apos;s what&apos;s happening with your services today.
         </p>
       </div>
 

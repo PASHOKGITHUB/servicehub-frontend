@@ -45,12 +45,14 @@ const LoginPage = () => {
     e.preventDefault();
     
     try {
-      await login(formData);
-      toast.success('Login successful!');
-      // ProtectedRoute will handle the redirect
-    } catch (error: any) {
-      toast.error(error?.message || 'Login failed');
-    }
+    await login(formData);
+    toast.success('Login successful!');
+    // ProtectedRoute will handle the redirect
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Login failed';
+    toast.error(errorMessage);
+  }
+
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,7 +167,7 @@ const LoginPage = () => {
             
             <div className="text-center">
               <p className="text-gray-600 text-sm sm:text-base">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <Button
                   variant="link"
                   onClick={() => router.push('/register')}

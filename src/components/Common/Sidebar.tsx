@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -19,11 +20,11 @@ import {
   User,
   Settings,
   Users,
-  BookOpen,
   ArrowLeft,
   Briefcase,
   HelpCircle,
-  LogOut
+  LogOut,
+  LucideIcon
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
@@ -31,7 +32,7 @@ import { toast } from 'sonner';
 interface MenuItem {
   id: string;
   label: string;
-  icon: any;
+  icon: LucideIcon;
   path?: string;
   children?: MenuItem[];
 }
@@ -119,7 +120,7 @@ const Sidebar = ({ role }: SidebarProps) => {
       await logout();
       toast.success('Logged out successfully');
       router.push('/');
-    } catch (error) {
+    } catch {
       toast.error('Failed to logout');
     }
   };
@@ -236,10 +237,12 @@ const Sidebar = ({ role }: SidebarProps) => {
               )}
             >
               {user?.avatar ? (
-                <img 
+                <Image 
                   src={user.avatar} 
                   alt="Profile" 
-                  className={cn("rounded-full", isCollapsed ? "w-6 h-6" : "w-6 h-6 sm:w-8 sm:h-8")}
+                  width={isCollapsed ? 24 : 32}
+                  height={isCollapsed ? 24 : 32}
+                  className="rounded-full"
                 />
               ) : (
                 <div className={cn(

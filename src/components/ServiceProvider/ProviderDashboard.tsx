@@ -5,9 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useRouter } from 'next/navigation';
 import { 
-  Calendar, 
   CreditCard, 
   Star, 
   TrendingUp,
@@ -20,7 +18,6 @@ import {
 import { toast } from 'sonner';
 
 const ProviderDashboard = () => {
-  const router = useRouter();
   const { user } = useAuthStore(); // ✅ Only use store, not useAuth hook
 
   // ProtectedRoute already handles loading and auth checks
@@ -84,7 +81,7 @@ const ProviderDashboard = () => {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-300 text-xs sm:text-sm font-medium">Today's Earnings</p>
+                <p className="text-gray-300 text-xs sm:text-sm font-medium">Today&apos;s Earnings</p>
                 <p className="text-2xl sm:text-3xl font-bold">₹4,500</p>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#1EC6D9] to-[#16A8B8] rounded-full flex items-center justify-center">

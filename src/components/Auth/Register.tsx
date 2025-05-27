@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,12 +42,28 @@ const RegisterPage = () => {
     { value: 'provider', label: 'Service Provider', icon: Users, description: 'Offer your services' }
   ];
 
+  // Wrap redirectToDashboard in useCallback to prevent unnecessary re-renders
+  const redirectToDashboard = useCallback((role: string) => {
+    switch (role) {
+      case 'admin':
+        router.push('/admin-dashboard');
+        break;
+      case 'provider':
+        router.push('/provider-dashboard');
+        break;
+      case 'user':
+      default:
+        router.push('/user-dashboard');
+        break;
+    }
+  }, [router]);
+
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
       redirectToDashboard(user.role);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, redirectToDashboard]);
 
   // Show error toast when error changes
   useEffect(() => {
@@ -62,21 +78,6 @@ const RegisterPage = () => {
       toast.error(validationError);
     }
   }, [validationError]);
-
-  const redirectToDashboard = (role: string) => {
-    switch (role) {
-      case 'admin':
-        router.push('/admin-dashboard');
-        break;
-      case 'provider':
-        router.push('/provider-dashboard');
-        break;
-      case 'user':
-      default:
-        router.push('/user-dashboard');
-        break;
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,19 +105,20 @@ const RegisterPage = () => {
         name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
         password: formData.password,
-        role: formData.role as 'user' | 'provider'
+        role: formData.role as 'user' | 'provider',
       };
 
       await register(payload);
       toast.success('Account created successfully! Please verify your email.');
-    } catch (error: any) {
-      // Extract meaningful error message
+    } catch (error: unknown) {
       let errorMessage = 'Registration failed';
-      if (error?.message) {
+
+      if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
+
       toast.error(errorMessage);
     }
   };

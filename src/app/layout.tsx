@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -38,10 +38,12 @@ export const metadata: Metadata = {
     title: "ServiceHub - Your One-Stop Service Platform",
     description: "Connect with trusted professionals for all your service needs in India.",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-  },
+};
+
+// ✅ Moved viewport to its own export
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -52,7 +54,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Additional meta tags for better SEO and PWA support */}
         <meta charSet="utf-8" />
         <meta name="theme-color" content="#1EC6D9" />
         <link rel="icon" href="/favicon.ico" />
@@ -63,14 +64,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        {/* 🔥 CRITICAL: AuthProvider must wrap everything */}
         <AuthProvider>
           <div className="min-h-screen">
             {children}
           </div>
         </AuthProvider>
-        
-        {/* Toast notifications - moved outside AuthProvider but inside body */}
         <Toaster 
           richColors 
           closeButton

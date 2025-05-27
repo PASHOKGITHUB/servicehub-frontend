@@ -10,7 +10,6 @@ import {
   UserCheck, 
   Calendar, 
   CreditCard, 
-  TrendingUp,
   AlertTriangle,
   CheckCircle,
   Clock,
