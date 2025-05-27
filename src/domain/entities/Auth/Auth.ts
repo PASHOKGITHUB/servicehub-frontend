@@ -1,5 +1,5 @@
+// src/domain/entities/Auth/Auth.ts - UPDATED WITH VERIFICATION TYPES
 import { User } from "./User";
-
 
 export interface LoginRequest {
   email: string;
@@ -17,6 +17,16 @@ export interface RegisterRequest {
 export interface AuthResponse {
   user: User;
   token: string;
+}
+
+export interface EmailVerificationResponse {
+  user: User;
+  alreadyVerified?: boolean;
+}
+
+export interface EmailSendResponse {
+  success: boolean;
+  previewUrl?: string;
 }
 
 export interface ApiError {

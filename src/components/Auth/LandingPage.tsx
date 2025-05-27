@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +10,35 @@ import { Home, Scissors, ShoppingCart, Heart, Star, Shield, Clock, CreditCard } 
 
 const LandingPage = () => {
   const router = useRouter();
+  const { isAuthenticated, user } = useAuthStore();
+
+  // Simple redirect for authenticated users
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      console.log('🔄 Redirecting authenticated user to dashboard...');
+      switch (user.role) {
+        case 'admin':
+          router.push('/admin-dashboard');
+          break;
+        case 'provider':
+          router.push('/provider-dashboard');
+          break;
+        case 'user':
+        default:
+          router.push('/user-dashboard');
+          break;
+      }
+    }
+  }, [isAuthenticated, user, router]);
+
+  // If authenticated user somehow reaches here, show loading
+  if (isAuthenticated && user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Redirecting to dashboard...</div>
+      </div>
+    );
+  }
 
   const services = [
     {
@@ -111,7 +142,7 @@ const LandingPage = () => {
               <Button 
                 size="lg" 
                 variant="outline"
-                onClick={() => router.push('/browse')}
+                onClick={() => router.push('#')}
                 className="text-base sm:text-lg px-6 sm:px-8 py-3 border-2 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
               >
                 Browse Services

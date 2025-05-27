@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, User, Users, Settings, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, Users, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { toast } from 'sonner';
 
 interface FormData {
   firstName: string;
@@ -32,7 +33,8 @@ const RegisterPage = () => {
     confirmPassword: '',
     role: ''
   });
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validationError, setValidationError] = useState<string>('');
 
   const roles = [
@@ -46,6 +48,20 @@ const RegisterPage = () => {
       redirectToDashboard(user.role);
     }
   }, [isAuthenticated, user]);
+
+  // Show error toast when error changes
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
+
+  // Show validation error toast
+  useEffect(() => {
+    if (validationError) {
+      toast.error(validationError);
+    }
+  }, [validationError]);
 
   const redirectToDashboard = (role: string) => {
     switch (role) {
@@ -92,10 +108,16 @@ const RegisterPage = () => {
       };
 
       await register(payload);
-      // Redirect will happen in useEffect when user state updates
-    } catch (error) {
-      // Error is handled in the store
-      console.error('Registration error:', error);
+      toast.success('Account created successfully! Please verify your email.');
+    } catch (error: any) {
+      // Extract meaningful error message
+      let errorMessage = 'Registration failed';
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      toast.error(errorMessage);
     }
   };
 
@@ -114,7 +136,7 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 flex items-center justify-center px-4 py-6 sm:py-8">
+    <div className="min-h-screen flex items-center justify-center px-4 py-6 sm:py-8">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
@@ -143,12 +165,6 @@ const RegisterPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {(error || validationError) && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mb-4 text-sm">
-                {error || validationError}
-              </div>
-            )}
-
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
@@ -218,32 +234,62 @@ const RegisterPage = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-gray-700 font-medium text-sm">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="Create a password"
-                  required
-                  disabled={isLoading}
-                  className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="Create a password"
+                    required
+                    disabled={isLoading}
+                    className="border-gray-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </Button>
+                </div>
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-gray-700 font-medium text-sm">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  placeholder="Confirm your password"
-                  required
-                  disabled={isLoading}
-                  className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    placeholder="Confirm your password"
+                    required
+                    disabled={isLoading}
+                    className="border-gray-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </Button>
+                </div>
               </div>
 
               <Button
