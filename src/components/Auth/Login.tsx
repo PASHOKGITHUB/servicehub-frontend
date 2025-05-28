@@ -9,12 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useLogin } from '@/hooks/useAuthQueries';
 import { LoginRequest } from '@/domain/entities/Auth/Auth';
-import { toast } from 'sonner';
 
 const LoginPage = () => {
   const router = useRouter();
-  const { user, isAuthenticated, login, isLoading } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
+  const loginMutation = useLogin();
   
   const [formData, setFormData] = useState<LoginRequest>({
     email: '',
@@ -22,10 +23,9 @@ const LoginPage = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
 
-  // Simple redirect for authenticated users
+  // Redirect authenticated users
   useEffect(() => {
     if (isAuthenticated && user) {
-      console.log('✅ Already authenticated, redirecting...');
       switch (user.role) {
         case 'admin':
           router.push('/admin-dashboard');
@@ -43,16 +43,7 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    try {
-    await login(formData);
-    toast.success('Login successful!');
-    // ProtectedRoute will handle the redirect
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Login failed';
-    toast.error(errorMessage);
-  }
-
+    loginMutation.mutate(formData);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,7 +103,7 @@ const LoginPage = () => {
                   onChange={handleInputChange}
                   placeholder="Enter your email"
                   required
-                  disabled={isLoading}
+                  disabled={loginMutation.isPending}
                   className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
@@ -128,7 +119,7 @@ const LoginPage = () => {
                     onChange={handleInputChange}
                     placeholder="Enter your password"
                     required
-                    disabled={isLoading}
+                    disabled={loginMutation.isPending}
                     className="border-gray-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
                   />
                   <Button
@@ -149,10 +140,10 @@ const LoginPage = () => {
 
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={loginMutation.isPending}
                 className="w-full bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white font-semibold py-2 sm:py-3"
               >
-                {isLoading ? (
+                {loginMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Signing In...

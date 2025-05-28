@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import { useCurrentUser } from '@/hooks/useAuthQueries';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Shield, Mail, Loader2 } from 'lucide-react';
@@ -14,78 +15,48 @@ interface ProtectedRouteProps {
   requireEmailVerification?: boolean;
 }
 
-// Helper function for debug logging
-const debugLog = (message: string, data?: unknown) => {
-  const timestamp = new Date().toISOString();
-  console.log(`🛡️ [${timestamp}] ProtectedRoute: ${message}`, data);
-};
-
 const ProtectedRoute = ({ 
   children, 
   allowedRoles,
   requireEmailVerification = true 
 }: ProtectedRouteProps) => {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, logout, isInitialized, initialize } = useAuthStore();
+  const { user, isAuthenticated, logout, isInitialized, initialize } = useAuthStore();
+  const { data: currentUserData, isLoading: isLoadingUser, error: userError } = useCurrentUser();
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
-  // 🔥 STEP 1: Initialize auth store when component mounts
+  // Initialize auth store when component mounts
   useEffect(() => {
-    debugLog('Component mounted - starting auth check', {
-      isInitialized,
-      isAuthenticated,
-      hasUser: !!user,
-      allowedRoles,
-      currentPath: window.location.pathname
-    });
-
     const initializeAuth = async () => {
       if (!isInitialized) {
-        debugLog('🔄 Auth not initialized, calling initialize...');
-        await initialize();
+        initialize();
       }
       setHasCheckedAuth(true);
     };
 
     initializeAuth();
-  }, [isInitialized, initialize, isAuthenticated, user, allowedRoles]);
+  }, [isInitialized, initialize]);
 
-  // 🔥 STEP 2: Handle redirects after auth check is complete
+  // Handle redirects after auth check is complete
   const handleRedirects = useCallback(() => {
-    if (!hasCheckedAuth || !isInitialized) {
-      debugLog('⏳ Waiting for auth check to complete...');
+    if (!hasCheckedAuth || !isInitialized || isLoadingUser) {
       return;
     }
 
-    debugLog('🔍 Auth check complete, handling redirects', {
-      isLoading,
-      isAuthenticated,
-      hasUser: !!user,
-      userRole: user?.role,
-      allowedRoles,
-      currentPath: window.location.pathname
-    });
-
-    // Don't redirect while still loading
-    if (isLoading) {
-      debugLog('⏳ Still loading, waiting...');
+    // If there's a user error (like 401), consider user not authenticated
+    if (userError) {
+      router.push('/login');
       return;
     }
 
     // Not authenticated -> redirect to login
     if (!isAuthenticated || !user) {
-      debugLog('❌ Not authenticated, redirecting to login');
       router.push('/login');
       return;
     }
 
     // Wrong role -> redirect to correct dashboard
     if (allowedRoles && !allowedRoles.includes(user.role)) {
-      debugLog('❌ Wrong role, redirecting to correct dashboard', {
-        userRole: user.role,
-        allowedRoles
-      });
-      
       switch (user.role) {
         case 'admin':
           router.push('/admin-dashboard');
@@ -100,20 +71,14 @@ const ProtectedRoute = ({
       }
       return;
     }
-
-    debugLog('✅ All auth checks passed');
-  }, [hasCheckedAuth, isInitialized, isLoading, isAuthenticated, user, allowedRoles, router]);
+  }, [hasCheckedAuth, isInitialized, isLoadingUser, userError, isAuthenticated, user, allowedRoles, router]);
 
   useEffect(() => {
     handleRedirects();
   }, [handleRedirects]);
 
-  // 🔥 STEP 3: Render appropriate UI based on auth state
-
   // Still checking auth or loading
-  if (!hasCheckedAuth || !isInitialized || isLoading) {
-    debugLog('🔄 Rendering loading state');
-    
+  if (!hasCheckedAuth || !isInitialized || isLoadingUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center p-8">
@@ -133,10 +98,8 @@ const ProtectedRoute = ({
     );
   }
 
-  // Not authenticated
-  if (!isAuthenticated || !user) {
-    debugLog('🔄 Rendering redirect state (not authenticated)');
-    
+  // Not authenticated or user error
+  if (userError || !isAuthenticated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center p-8">
@@ -150,8 +113,6 @@ const ProtectedRoute = ({
 
   // Wrong role
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    debugLog('🔄 Rendering redirect state (wrong role)');
-    
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center p-8">
@@ -165,8 +126,6 @@ const ProtectedRoute = ({
 
   // Email not verified (if required)
   if (requireEmailVerification && !user.isEmailVerified) {
-    debugLog('📧 Rendering email verification screen');
-    
     return (
       <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
         <Card className="w-full max-w-md shadow-lg">
@@ -185,10 +144,7 @@ const ProtectedRoute = ({
             <div className="space-y-3">
               <Button
                 variant="outline"
-                onClick={() => {
-                  debugLog('Manual logout triggered from verification screen');
-                  logout();
-                }}
+                onClick={() => logout()}
                 className="w-full"
               >
                 Sign Out
@@ -205,7 +161,6 @@ const ProtectedRoute = ({
   }
 
   // All checks passed - render children
-  debugLog('✅ Rendering protected content');
   return <>{children}</>;
 };
 

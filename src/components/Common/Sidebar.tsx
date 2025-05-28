@@ -27,6 +27,7 @@ import {
   LucideIcon
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useLogout } from '@/hooks/useAuthQueries';
 import { toast } from 'sonner';
 
 interface MenuItem {
@@ -44,7 +45,8 @@ interface SidebarProps {
 const Sidebar = ({ role }: SidebarProps) => {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
+  const logoutMutation = useLogout();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>(['bookings']);
 
@@ -117,10 +119,12 @@ const Sidebar = ({ role }: SidebarProps) => {
 
   const handleLogout = async () => {
     try {
-      await logout();
-      toast.success('Logged out successfully');
-      router.push('/');
-    } catch {
+      logoutMutation.mutate(undefined, {
+        onSuccess: () => {
+          router.push('/');
+        }
+      });
+    } catch (error) {
       toast.error('Failed to logout');
     }
   };
@@ -144,36 +148,35 @@ const Sidebar = ({ role }: SidebarProps) => {
   };
 
   return (
-  <div className={cn(
-    "h-screen bg-[#181A1B] border-r border-gray-800 transition-all duration-300 flex flex-col",
-    "fixed left-0 top-0 z-40 lg:sticky lg:top-0 lg:z-auto",
-    isCollapsed ? "w-16" : "w-64"
-  )}>
+    <div className={cn(
+      "h-screen bg-[#181A1B] border-r border-gray-800 transition-all duration-300 flex flex-col",
+      "fixed left-0 top-0 z-40 lg:sticky lg:top-0 lg:z-auto",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
       {/* Header */}
-    <div className="p-3 sm:p-4 border-b border-gray-800 flex-shrink-0">
-      <div className="flex items-center justify-between">
-        {!isCollapsed && (
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-[#1EC6D9] rounded-lg"></div>
-            <span className="font-bold text-sm sm:text-lg text-white">
-              ServiceHub
-            </span>
-          </div>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="text-[#E0E0E0] hover:text-white hover:bg-gray-800 p-1 sm:p-2"
-        >
-          {isCollapsed ? <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" /> : <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />}
-        </Button>
+      <div className="p-3 sm:p-4 border-b border-gray-800 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          {!isCollapsed && (
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-[#1EC6D9] rounded-lg"></div>
+              <span className="font-bold text-sm sm:text-lg text-white">
+                ServiceHub
+              </span>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="text-[#E0E0E0] hover:text-white hover:bg-gray-800 p-1 sm:p-2"
+          >
+            {isCollapsed ? <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" /> : <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />}
+          </Button>
+        </div>
       </div>
-    </div>
-
 
       {/* Navigation */}
-     <nav className="flex-1 px-1 sm:px-2 py-2 sm:py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-1 sm:px-2 py-2 sm:py-4 space-y-1 overflow-y-auto">
         {items.map((item) => (
           <div key={item.id}>
             <Button
@@ -277,10 +280,11 @@ const Sidebar = ({ role }: SidebarProps) => {
               <Button
                 variant="ghost"
                 onClick={handleLogout}
+                disabled={logoutMutation.isPending}
                 className="w-full justify-start text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
               >
                 <LogOut className="w-4 h-4 mr-2" />
-                Logout
+                {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
               </Button>
             </div>
           </PopoverContent>

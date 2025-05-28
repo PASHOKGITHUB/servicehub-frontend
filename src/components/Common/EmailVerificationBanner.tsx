@@ -1,43 +1,23 @@
-// src/components/Common/EmailVerificationBanner.tsx
 'use client';
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { X, Mail, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { sendVerificationEmail } from '@/instance/Auth';
-import { toast } from 'sonner';
+import { useSendVerificationEmail } from '@/hooks/useAuthQueries';
 
 const EmailVerificationBanner = () => {
   const { user } = useAuthStore();
   const [isVisible, setIsVisible] = useState(true);
-  const [isResending, setIsResending] = useState(false);
+  const sendVerificationMutation = useSendVerificationEmail();
 
   // Don't show if user is verified or banner is dismissed
   if (!user || user.isEmailVerified || !isVisible) {
     return null;
   }
 
-  const handleResendVerification = async () => {
-    try {
-      setIsResending(true);
-      const result = await sendVerificationEmail();
-      
-      if (result.success) {
-        toast.success('Verification email sent! Please check your inbox.');
-        
-        // Show preview URL in development
-        if (result.previewUrl) {
-          console.log('📧 Email Preview URL:', result.previewUrl);
-          toast.info('Check console for email preview link (development mode)');
-        }
-      }
-    }  catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to send verification email';
-    toast.error(errorMessage);
-  }  finally {
-      setIsResending(false);
-    }
+  const handleResendVerification = () => {
+    sendVerificationMutation.mutate();
   };
 
   return (
@@ -55,10 +35,10 @@ const EmailVerificationBanner = () => {
                 variant="link"
                 size="sm"
                 onClick={handleResendVerification}
-                disabled={isResending}
+                disabled={sendVerificationMutation.isPending}
                 className="text-yellow-700 underline p-0 h-auto font-semibold"
               >
-                {isResending ? (
+                {sendVerificationMutation.isPending ? (
                   <>
                     <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                     Sending...

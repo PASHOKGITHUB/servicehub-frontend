@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, User, Users, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { useRegister } from '@/hooks/useAuthQueries';
 import { toast } from 'sonner';
 
 interface FormData {
@@ -23,7 +24,8 @@ interface FormData {
 
 const RegisterPage = () => {
   const router = useRouter();
-  const { register, isLoading, error, clearError, isAuthenticated, user } = useAuthStore();
+  const { clearError, isAuthenticated, user } = useAuthStore();
+  const registerMutation = useRegister();
   
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
@@ -65,13 +67,6 @@ const RegisterPage = () => {
     }
   }, [isAuthenticated, user, redirectToDashboard]);
 
-  // Show error toast when error changes
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-    }
-  }, [error]);
-
   // Show validation error toast
   useEffect(() => {
     if (validationError) {
@@ -100,27 +95,14 @@ const RegisterPage = () => {
       return;
     }
 
-    try {
-      const payload = {
-        name: `${formData.firstName} ${formData.lastName}`.trim(),
-        email: formData.email,
-        password: formData.password,
-        role: formData.role as 'user' | 'provider',
-      };
+    const payload = {
+      name: `${formData.firstName} ${formData.lastName}`.trim(),
+      email: formData.email,
+      password: formData.password,
+      role: formData.role as 'user' | 'provider',
+    };
 
-      await register(payload);
-      toast.success('Account created successfully! Please verify your email.');
-    } catch (error: unknown) {
-      let errorMessage = 'Registration failed';
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-
-      toast.error(errorMessage);
-    }
+    registerMutation.mutate(payload);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -178,7 +160,7 @@ const RegisterPage = () => {
                     onChange={handleInputChange}
                     placeholder="John"
                     required
-                    disabled={isLoading}
+                    disabled={registerMutation.isPending}
                     className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
@@ -191,7 +173,7 @@ const RegisterPage = () => {
                     onChange={handleInputChange}
                     placeholder="Doe"
                     required
-                    disabled={isLoading}
+                    disabled={registerMutation.isPending}
                     className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
@@ -207,14 +189,14 @@ const RegisterPage = () => {
                   onChange={handleInputChange}
                   placeholder="john@example.com"
                   required
-                  disabled={isLoading}
+                  disabled={registerMutation.isPending}
                   className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="role" className="text-gray-700 font-medium text-sm">Account Type</Label>
-                <Select onValueChange={handleRoleChange} disabled={isLoading}>
+                <Select onValueChange={handleRoleChange} disabled={registerMutation.isPending}>
                   <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
@@ -245,7 +227,7 @@ const RegisterPage = () => {
                     onChange={handleInputChange}
                     placeholder="Create a password"
                     required
-                    disabled={isLoading}
+                    disabled={registerMutation.isPending}
                     className="border-gray-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
                   />
                   <Button
@@ -275,7 +257,7 @@ const RegisterPage = () => {
                     onChange={handleInputChange}
                     placeholder="Confirm your password"
                     required
-                    disabled={isLoading}
+                    disabled={registerMutation.isPending}
                     className="border-gray-200 focus:border-blue-500 focus:ring-blue-500 pr-10"
                   />
                   <Button
@@ -296,10 +278,10 @@ const RegisterPage = () => {
 
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={registerMutation.isPending}
                 className="w-full bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white font-semibold py-2 sm:py-3 mt-6"
               >
-                {isLoading ? (
+                {registerMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Creating Account...

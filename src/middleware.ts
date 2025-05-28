@@ -2,15 +2,21 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // DO NOTHING - let components handle everything
-  console.log(`${request}`);
+  // Only log in development and reduce noise
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🛡️ Middleware: ${request.method} ${request.url}`);
+  }
+  
   return NextResponse.next();
-
 }
 
 export const config = {
   matcher: [
-    // Don't run middleware at all
-    '/disabled-path-that-never-matches'
+    // Match all request paths except for the ones starting with:
+    // - api (API routes)
+    // - _next/static (static files)
+    // - _next/image (image optimization files)
+    // - favicon.ico (favicon file)
+    '/((?!api|_next/static|_next/image|favicon.ico|sw.js|workbox-|icon-).*)',
   ],
 };

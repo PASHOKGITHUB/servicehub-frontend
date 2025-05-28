@@ -1,7 +1,6 @@
-// src/components/auth/VerifyEmailContent.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,13 +12,22 @@ import { toast } from 'sonner';
 const VerifyEmailContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { updateUser, user, loadUser } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
   const [isAlreadyVerified, setIsAlreadyVerified] = useState(false);
+  
+  // Use ref to prevent multiple API calls
+  const hasProcessedToken = useRef(false);
+  const isProcessing = useRef(false);
 
   useEffect(() => {
     const token = searchParams.get('token');
+    
+    // Prevent multiple executions
+    if (hasProcessedToken.current || isProcessing.current) {
+      return;
+    }
     
     if (!token) {
       setStatus('error');
@@ -27,12 +35,23 @@ const VerifyEmailContent = () => {
       return;
     }
 
+    // Mark as processing to prevent duplicate calls
+    isProcessing.current = true;
+
     const verifyEmail = async () => {
       try {
-        setStatus('loading');
+        console.log('🔍 Starting email verification for token:', token.substring(0, 10) + '...');
+        
         const result = await verifyEmailToken(token);
         
-        console.log('✅ Verification result:', result);
+        // Mark as processed
+        hasProcessedToken.current = true;
+        
+        console.log('✅ Verification result:', {
+          userEmail: result.user.email,
+          alreadyVerified: result.alreadyVerified,
+          isVerified: result.user.isEmailVerified
+        });
         
         // Handle both new verification and already verified cases
         if (result.alreadyVerified === true) {
@@ -49,9 +68,6 @@ const VerifyEmailContent = () => {
         
         // Update user in store with verified status
         updateUser(result.user);
-        
-        // Reload user data to ensure consistency
-        await loadUser();
         
         // Redirect to correct dashboard based on user role
         setTimeout(() => {
@@ -74,6 +90,7 @@ const VerifyEmailContent = () => {
         
       } catch (error: unknown) {
         console.error('❌ Verification error:', error);
+        hasProcessedToken.current = true; // Mark as processed even on error
         setStatus('error');
 
         const errorMessage =
@@ -83,11 +100,13 @@ const VerifyEmailContent = () => {
 
         setMessage(errorMessage);
         toast.error(errorMessage);
+      } finally {
+        isProcessing.current = false;
       }
     };
 
     verifyEmail();
-  }, [searchParams, updateUser, router, user?.role, loadUser]);
+  }, [searchParams, updateUser, router, user?.role]); // Keep dependencies but use refs to prevent re-runs
 
   const getIcon = () => {
     switch (status) {
