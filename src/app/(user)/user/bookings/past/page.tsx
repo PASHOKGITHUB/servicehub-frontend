@@ -1,16 +1,16 @@
 import { Metadata } from 'next';
-import UserDashboard from '@/components/User/UserDashboard';
+import PastBookings from '@/components/User/Bookings/Past';
 import ProtectedRoute from '@/components/Common/ProtectedRoute';
 
 export const metadata: Metadata = {
-  title: 'Dashboard - ServiceHub',
-  description: 'Your personal dashboard to manage bookings and discover services',
+  title: 'Past Bookings - ServiceHub',
+  description: 'View your booking history and leave reviews',
 };
 
-export default function UserDashboardPage() {
+export default function PastBookingsPage() {
   return (
     <ProtectedRoute allowedRoles={['user']} requireEmailVerification={true}>
-      <UserDashboard />
+      <PastBookings />
     </ProtectedRoute>
   );
 }

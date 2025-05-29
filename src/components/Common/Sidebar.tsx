@@ -51,41 +51,41 @@ const Sidebar = ({ role }: SidebarProps) => {
   const [expandedItems, setExpandedItems] = useState<string[]>(['bookings']);
 
   const menuItems: Record<string, MenuItem[]> = {
-    user: [
-      { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/user-dashboard' },
-      { id: 'browse', label: 'Browse Services', icon: Search, path: '#' },
-      { 
-        id: 'bookings', 
-        label: 'My Bookings', 
-        icon: Calendar,
-        children: [
-          { id: 'upcoming', label: 'Upcoming', icon: Calendar, path: '#' },
-          { id: 'past', label: 'Past', icon: Calendar, path: '#' }
-        ]
-      },
-      { id: 'payments', label: 'Payments & Wallet', icon: CreditCard, path: '#' },
-      { id: 'notifications', label: 'Notifications', icon: Bell, path: '#' },
-      { id: 'reviews', label: 'Ratings & Reviews', icon: Star, path: '#' },
-      { id: 'support', label: 'Support', icon: HelpCircle, path: '#' },
-      { id: 'profile', label: 'Profile', icon: User, path: '#' }
-    ],
+     user: [
+    { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/user-dashboard' },
+    { id: 'browse', label: 'Browse Services', icon: Search, path: '/user/browse' },
+    { 
+      id: 'bookings', 
+      label: 'My Bookings', 
+      icon: Calendar,
+      children: [
+        { id: 'upcoming', label: 'Upcoming', icon: Calendar, path: '/user/bookings/upcoming' },
+        { id: 'past', label: 'Past', icon: Calendar, path: '/user/bookings/past' }
+      ]
+    },
+    { id: 'payments', label: 'Payments & Wallet', icon: CreditCard, path: '/user/payments' },
+    { id: 'notifications', label: 'Notifications', icon: Bell, path: '/user/notifications' },
+    { id: 'reviews', label: 'Ratings & Reviews', icon: Star, path: '/user/reviews' },
+    { id: 'support', label: 'Support', icon: HelpCircle, path: '/user/support' },
+    { id: 'profile', label: 'Profile', icon: User, path: '/user/profile' }
+  ],
     provider: [
       { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/provider-dashboard' },
-      { id: 'services', label: 'My Services', icon: Briefcase, path: '#' },
+      { id: 'services', label: 'My Services', icon: Briefcase, path: '/services' },
       { 
         id: 'bookings', 
         label: 'Booking Requests', 
         icon: Calendar,
         children: [
-          { id: 'pending', label: 'Pending', icon: Calendar, path: '#' },
-          { id: 'completed', label: 'Completed', icon: Calendar, path: '#' }
+          { id: 'pending', label: 'Pending', icon: Calendar, path: '/bookings/pending' },
+          { id: 'completed', label: 'Completed', icon: Calendar, path: '/bookings/completed' }
         ]
       },
-      { id: 'earnings', label: 'Earnings', icon: CreditCard, path: '#' },
-      { id: 'notifications', label: 'Notifications', icon: Bell, path: '#' },
-      { id: 'reviews', label: 'Ratings & Reviews', icon: Star, path: '#' },
-      { id: 'support', label: 'Support', icon: HelpCircle, path: '#' },
-      { id: 'profile', label: 'Profile', icon: User, path: '#' }
+      { id: 'earnings', label: 'Earnings', icon: CreditCard, path: '/earnings' },
+      { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
+      { id: 'reviews', label: 'Ratings & Reviews', icon: Star, path: '/reviews' },
+      { id: 'support', label: 'Support', icon: HelpCircle, path: '/support' },
+      { id: 'profile', label: 'Profile', icon: User, path: '/profile' }
     ],
     admin: [
       { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin-dashboard' },
@@ -228,68 +228,78 @@ const Sidebar = ({ role }: SidebarProps) => {
         ))}
       </nav>
 
-      {/* Footer - User Profile */}
-      <div className="p-2 sm:p-4 border-t border-gray-800 flex-shrink-0">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              className={cn(
-                "w-full justify-start text-[#E0E0E0] hover:text-white hover:bg-gray-800 h-8 sm:h-10",
-                isCollapsed ? "px-1 sm:px-2" : "px-2 sm:px-3"
-              )}
-            >
-              {user?.avatar ? (
-                <Image 
-                  src={user.avatar} 
-                  alt="Profile" 
-                  width={isCollapsed ? 24 : 32}
-                  height={isCollapsed ? 24 : 32}
-                  className="rounded-full"
-                />
-              ) : (
-                <div className={cn(
-                  `${getAvatarColor(user?.email || '')} rounded-full flex items-center justify-center text-white font-semibold`,
-                  isCollapsed ? "w-6 h-6 text-xs" : "w-6 h-6 sm:w-8 sm:h-8 text-xs sm:text-sm"
-                )}>
-                  {getInitials(user?.name || 'User')}
-                </div>
-              )}
-              {!isCollapsed && (
-                <div className="ml-2 sm:ml-3 flex-1 text-left">
-                  <div className="text-xs sm:text-sm font-medium truncate">
-                    {user?.name || 'User'}
-                  </div>
-                  <div className="text-xs text-gray-400 truncate">
-                    {user?.email}
-                  </div>
-                </div>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-56 p-2" side="right" align="end">
-            <div className="space-y-1">
-              <Button
-                variant="ghost"
-                onClick={() => router.push('/')}
-                className="w-full justify-start text-sm"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Home
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={handleLogout}
-                disabled={logoutMutation.isPending}
-                className="w-full justify-start text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
-              </Button>
+{/* Footer - User Profile */}
+<div className="p-2 sm:p-4 border-t border-gray-800 flex-shrink-0">
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button
+        variant="ghost"
+        className={cn(
+          "w-full justify-start text-[#E0E0E0] hover:text-white hover:bg-gray-800 h-8 sm:h-10",
+          isCollapsed ? "px-1 sm:px-2" : "px-2 sm:px-3"
+        )}
+      >
+        {user?.avatar ? (
+          <Image 
+            src={user.avatar} 
+            alt="Profile" 
+            width={isCollapsed ? 24 : 32}
+            height={isCollapsed ? 24 : 32}
+            className="rounded-full flex-shrink-0"
+          />
+        ) : (
+          <div className={cn(
+            `${getAvatarColor(user?.email || '')} rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0`,
+            isCollapsed ? "w-6 h-6 text-xs" : "w-6 h-6 sm:w-8 sm:h-8 text-xs sm:text-sm"
+          )}>
+            {getInitials(user?.name || 'User')}
+          </div>
+        )}
+        {!isCollapsed && (
+          <div className="ml-2 sm:ml-3 flex-1 min-w-0 text-left">
+            <div className="text-xs sm:text-sm font-medium truncate">
+              {user?.name || 'User'}
             </div>
-          </PopoverContent>
-        </Popover>
+            <div className="text-xs text-gray-400 truncate">
+              {(user?.email ?? '').length > 20 ? `${(user?.email ?? '').substring(0, 17)}...` : (user?.email ?? '')}
+            </div>
+          </div>
+        )}
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="w-56 p-2" side="right" align="end">
+      <div className="space-y-1">
+        {/* Show full user info in popup */}
+        <div className="px-2 py-1 border-b border-gray-200 mb-2">
+          <div className="text-sm font-medium text-gray-900 truncate">
+            {user?.name || 'User'}
+          </div>
+          <div className="text-xs text-gray-500 break-all">
+            {user?.email}
+          </div>
+        </div>
+        
+        <Button
+          variant="ghost"
+          onClick={() => router.push('/')}
+          className="w-full justify-start text-sm"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Home
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={handleLogout}
+          disabled={logoutMutation.isPending}
+          className="w-full justify-start text-sm text-red-600 hover:text-red-700 hover:bg-red-50"
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          {logoutMutation.isPending ? 'Logging out...' : 'Logout'}
+        </Button>
       </div>
+    </PopoverContent>
+  </Popover>
+</div>
     </div>
   );
 };

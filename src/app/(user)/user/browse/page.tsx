@@ -1,16 +1,16 @@
 import { Metadata } from 'next';
-import UserDashboard from '@/components/User/UserDashboard';
+import BrowseServices from '@/components/User/Browse';
 import ProtectedRoute from '@/components/Common/ProtectedRoute';
 
 export const metadata: Metadata = {
-  title: 'Dashboard - ServiceHub',
-  description: 'Your personal dashboard to manage bookings and discover services',
+  title: 'Browse Services - ServiceHub',
+  description: 'Discover trusted professionals and services in your area',
 };
 
-export default function UserDashboardPage() {
+export default function BrowseServicesPage() {
   return (
     <ProtectedRoute allowedRoles={['user']} requireEmailVerification={true}>
-      <UserDashboard />
+      <BrowseServices />
     </ProtectedRoute>
   );
 }

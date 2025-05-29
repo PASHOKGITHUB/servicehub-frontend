@@ -11,7 +11,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Users, 
   Search, 
-  Filter, 
   MoreHorizontal,
   UserCheck,
   UserX,
@@ -19,7 +18,6 @@ import {
   Phone,
   Calendar,
   Shield,
-  AlertTriangle
 } from 'lucide-react';
 import {
   DropdownMenu,
