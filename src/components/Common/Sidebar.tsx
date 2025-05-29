@@ -89,9 +89,9 @@ const Sidebar = ({ role }: SidebarProps) => {
     ],
     admin: [
       { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/admin-dashboard' },
-      { id: 'users', label: 'User Management', icon: Users, path: '#' },
-      { id: 'providers', label: 'Provider Management', icon: Users, path: '#' },
-      { id: 'categories', label: 'Service Categories', icon: Settings, path: '#' },
+      { id: 'users', label: 'User Management', icon: Users, path: '/users' },
+      { id: 'providers', label: 'Provider Management', icon: Users, path: '/providers' },
+      { id: 'categories', label: 'Service Categories', icon: Settings, path: '/categories' },
       { id: 'bookings', label: 'Bookings Overview', icon: Calendar, path: '#' },
       { id: 'reports', label: 'Financial Reports', icon: CreditCard, path: '#' },
       { id: 'settings', label: 'System Settings', icon: Settings, path: '#' },
