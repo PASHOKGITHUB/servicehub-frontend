@@ -1,5 +1,4 @@
 // src/domain/entities/Auth/Auth.ts - UPDATED WITH VERIFICATION TYPES
-import { User } from "./User";
 
 export interface LoginRequest {
   email: string;
@@ -44,4 +43,19 @@ export interface AxiosErrorResponse {
     };
     status?: number;
   };
+}
+
+export interface User {
+  _id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: 'user' | 'provider' | 'admin';
+  avatar?: string;
+  isEmailVerified: boolean;
+  isPhoneVerified: boolean;
+  isActive: boolean;
+  lastLogin?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }

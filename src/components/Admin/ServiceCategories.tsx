@@ -1,13 +1,16 @@
+// src/components/Admin/ServiceCategories.tsx - Fixed Version
+
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { 
   Settings, 
   Plus, 
@@ -40,14 +43,18 @@ import {
   useUpdateCategory, 
   useDeleteCategory 
 } from '@/hooks/useAdminQueries';
+import type { ServiceCategory } from '@/domain/entities';
 import { toast } from 'sonner';
 
 const ServiceCategories = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<any>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  // Fix: Change from any to ServiceCategory | null
+  const [editingCategory, setEditingCategory] = useState<ServiceCategory | null>(null);
+  // Remove unused variable warning by commenting out
+  // const [currentPage, setCurrentPage] = useState(1);
+  const currentPage = 1; // Use const since pagination isn't implemented
   
   const [formData, setFormData] = useState({
     name: '',
@@ -81,7 +88,8 @@ const ServiceCategories = () => {
     }
   };
 
-  const handleEdit = (category: any) => {
+  // Fix: Change parameter type from any to ServiceCategory
+  const handleEdit = (category: ServiceCategory) => {
     setEditingCategory(category);
     setFormData({
       name: category.name,
@@ -108,7 +116,8 @@ const ServiceCategories = () => {
     }
   };
 
-  const handleToggleStatus = async (category: any) => {
+  // Fix: Change parameter type from any to ServiceCategory
+  const handleToggleStatus = async (category: ServiceCategory) => {
     try {
       await updateCategoryMutation.mutateAsync({
         id: category._id,
@@ -233,7 +242,14 @@ const ServiceCategories = () => {
                   disabled={createCategoryMutation.isPending}
                   className="bg-gradient-to-r from-[#1EC6D9] to-[#16A8B8]"
                 >
-                  {createCategoryMutation.isPending ? 'Creating...' : 'Create Category'}
+                  {createCategoryMutation.isPending ? (
+                    <>
+                      <LoadingSpinner size="sm" className="mr-2" />
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Category'
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -269,7 +285,8 @@ const ServiceCategories = () => {
             </Card>
           ))
         ) : (
-          categoriesData?.categories?.map((category: any) => (
+          // Fix: Change from any to ServiceCategory
+          categoriesData?.categories?.map((category: ServiceCategory) => (
             <Card key={category._id} className="border border-gray-200 shadow-sm rounded-2xl hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
@@ -288,28 +305,36 @@ const ServiceCategories = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(category)}>
+                      <DropdownMenuItem 
+                        onClick={() => handleEdit(category)}
+                        disabled={updateCategoryMutation.isPending}
+                      >
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleToggleStatus(category)}>
-                        {category.isActive ? (
-                          <>
-                            <EyeOff className="w-4 h-4 mr-2" />
-                            Deactivate
-                          </>
+                      <DropdownMenuItem 
+                        onClick={() => handleToggleStatus(category)}
+                        disabled={updateCategoryMutation.isPending}
+                      >
+                        {updateCategoryMutation.isPending ? (
+                          <LoadingSpinner size="sm" className="w-4 h-4 mr-2" />
+                        ) : category.isActive ? (
+                          <EyeOff className="w-4 h-4 mr-2" />
                         ) : (
-                          <>
-                            <Eye className="w-4 h-4 mr-2" />
-                            Activate
-                          </>
+                          <Eye className="w-4 h-4 mr-2" />
                         )}
+                        {category.isActive ? 'Deactivate' : 'Activate'}
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         onClick={() => handleDelete(category._id)}
+                        disabled={deleteCategoryMutation.isPending}
                         className="text-red-600"
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
+                        {deleteCategoryMutation.isPending ? (
+                          <LoadingSpinner size="sm" className="w-4 h-4 mr-2" />
+                        ) : (
+                          <Trash2 className="w-4 h-4 mr-2" />
+                        )}
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -436,7 +461,14 @@ const ServiceCategories = () => {
               disabled={updateCategoryMutation.isPending}
               className="bg-gradient-to-r from-[#1EC6D9] to-[#16A8B8]"
             >
-              {updateCategoryMutation.isPending ? 'Updating...' : 'Update Category'}
+              {updateCategoryMutation.isPending ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  Updating...
+                </>
+              ) : (
+                'Update Category'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

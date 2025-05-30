@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,11 +26,12 @@ import {
 } from 'lucide-react';
 import { useUserBookings, useCreateReview } from '@/hooks/useUserQueries';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { Booking, BookingStatus } from '@/domain/entities/User/Booking';
+import { BookingStatus } from '@/domain/entities/User/Booking';
+import { UserBooking } from '@/domain/entities';
 
 const PastBookings = () => {
   const [page, setPage] = useState(1);
-  const [reviewingBooking, setReviewingBooking] = useState<Booking | null>(null);
+  const [reviewingBooking, setReviewingBooking] = useState<UserBooking | null>(null);
   const [reviewData, setReviewData] = useState({
     rating: 5,
     comment: ''
@@ -46,7 +47,7 @@ const PastBookings = () => {
 
   const createReviewMutation = useCreateReview();
 
-  const handleSubmitReview = async () => {
+  const handleSubmitReview = async (): Promise<void> => {
     if (!reviewingBooking) return;
 
     try {
@@ -57,21 +58,9 @@ const PastBookings = () => {
       });
       setReviewingBooking(null);
       setReviewData({ rating: 5, comment: '' });
-    } catch (error) {
+    } catch (err) {
       // Error is handled by the mutation
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      case 'refunded':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      console.error('Failed to submit review:', err);
     }
   };
 
@@ -226,12 +215,12 @@ const PastBookings = () => {
 };
 
 interface PastBookingCardProps {
-  booking: Booking;
+  booking: UserBooking;
   onReview: () => void;
 }
 
-const PastBookingCard = ({ booking, onReview }: PastBookingCardProps) => {
-  const getStatusColor = (status: string) => {
+const PastBookingCard: React.FC<PastBookingCardProps> = ({ booking, onReview }) => {
+  const getStatusColor = (status: string): string => {
     switch (status) {
       case 'completed':
         return 'bg-green-100 text-green-800';
@@ -244,7 +233,7 @@ const PastBookingCard = ({ booking, onReview }: PastBookingCardProps) => {
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string): React.ReactElement | null => {
     switch (status) {
       case 'completed':
         return <CheckCircle className="w-4 h-4" />;
@@ -255,6 +244,10 @@ const PastBookingCard = ({ booking, onReview }: PastBookingCardProps) => {
       default:
         return null;
     }
+  };
+
+  const handleBookAgain = (): void => {
+    window.location.href = `/user/services/${booking.service._id}`;
   };
 
   return (
@@ -372,6 +365,7 @@ const PastBookingCard = ({ booking, onReview }: PastBookingCardProps) => {
                   variant="outline"
                   size="sm"
                   onClick={onReview}
+                  className="border-[#1EC6D9] text-[#1EC6D9] hover:bg-[#1EC6D9] hover:text-white"
                 >
                   <Star className="w-4 h-4 mr-1" />
                   Leave Review
@@ -380,7 +374,8 @@ const PastBookingCard = ({ booking, onReview }: PastBookingCardProps) => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.location.href = `/user/services/${booking.service._id}`}
+                onClick={handleBookAgain}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 Book Again
               </Button>
@@ -392,7 +387,7 @@ const PastBookingCard = ({ booking, onReview }: PastBookingCardProps) => {
   );
 };
 
-const BookingsSkeleton = () => (
+const BookingsSkeleton: React.FC = () => (
   <div className="space-y-4">
     {[...Array(3)].map((_, i) => (
       <Card key={i}>

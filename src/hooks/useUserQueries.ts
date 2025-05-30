@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   getUserDashboard,
   browseServices,
@@ -11,19 +12,24 @@ import {
   updateReview,
   deleteReview,
 } from '@/instance/User';
-import { toast } from 'sonner';
+import type {
+  BrowseServicesParams,
+  UserBookingsParams,
+  UserReviewsParams,
+  UpdateReviewRequest
+} from '@/domain/entities';
 
 // Query Keys
 export const userKeys = {
   all: ['user'] as const,
   dashboard: () => [...userKeys.all, 'dashboard'] as const,
   services: () => [...userKeys.all, 'services'] as const,
-  servicesList: (params: any) => [...userKeys.services(), 'list', params] as const,
+  servicesList: (params: BrowseServicesParams) => [...userKeys.services(), 'list', params] as const,
   serviceDetail: (id: string) => [...userKeys.services(), 'detail', id] as const,
   bookings: () => [...userKeys.all, 'bookings'] as const,
-  bookingsList: (params: any) => [...userKeys.bookings(), 'list', params] as const,
+  bookingsList: (params: UserBookingsParams) => [...userKeys.bookings(), 'list', params] as const,
   reviews: () => [...userKeys.all, 'reviews'] as const,
-  reviewsList: (params: any) => [...userKeys.reviews(), 'list', params] as const,
+  reviewsList: (params: UserReviewsParams) => [...userKeys.reviews(), 'list', params] as const,
 };
 
 // Dashboard
@@ -36,12 +42,12 @@ export const useUserDashboard = () => {
 };
 
 // Services
-export const useBrowseServices = (params: any) => {
+export const useBrowseServices = (params: BrowseServicesParams) => {
   return useQuery({
     queryKey: userKeys.servicesList(params),
     queryFn: () => browseServices(params),
     staleTime: 1000 * 60 * 5, // 5 minutes
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData) => previousData,
   });
 };
 
@@ -65,18 +71,18 @@ export const useCreateBooking = () => {
       queryClient.invalidateQueries({ queryKey: userKeys.bookings() });
       toast.success('Booking created successfully!');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message);
     },
   });
 };
 
-export const useUserBookings = (params: any) => {
+export const useUserBookings = (params: UserBookingsParams) => {
   return useQuery({
     queryKey: userKeys.bookingsList(params),
     queryFn: () => getUserBookings(params),
     staleTime: 1000 * 60 * 2, // 2 minutes
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData) => previousData,
   });
 };
 
@@ -91,7 +97,7 @@ export const useCancelBooking = () => {
       queryClient.invalidateQueries({ queryKey: userKeys.bookings() });
       toast.success('Booking cancelled successfully');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message);
     },
   });
@@ -108,18 +114,18 @@ export const useCreateReview = () => {
       queryClient.invalidateQueries({ queryKey: userKeys.bookings() });
       toast.success('Review submitted successfully!');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message);
     },
   });
 };
 
-export const useUserReviews = (params: any) => {
+export const useUserReviews = (params: UserReviewsParams) => {
   return useQuery({
     queryKey: userKeys.reviewsList(params),
     queryFn: () => getUserReviews(params),
     staleTime: 1000 * 60 * 5, // 5 minutes
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData) => previousData,
   });
 };
 
@@ -127,13 +133,13 @@ export const useUpdateReview = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ reviewId, data }: { reviewId: string; data: any }) =>
+    mutationFn: ({ reviewId, data }: UpdateReviewRequest) =>
       updateReview(reviewId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.reviews() });
       toast.success('Review updated successfully!');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message);
     },
   });
@@ -148,7 +154,7 @@ export const useDeleteReview = () => {
       queryClient.invalidateQueries({ queryKey: userKeys.reviews() });
       toast.success('Review deleted successfully');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message);
     },
   });

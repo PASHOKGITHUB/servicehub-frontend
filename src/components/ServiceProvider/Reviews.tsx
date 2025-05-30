@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { 
   useProviderReviews, 
@@ -30,52 +28,81 @@ import {
 } from '@/hooks/useProviderQueries';
 import { toast } from 'sonner';
 
+// Import existing type definitions
+import type { 
+  ProviderReview,
+  ProviderReviewsParams,
+  ProviderReviewsResponse,
+  ReplyToReviewRequest,
+  ProviderDashboardData
+} from '@/domain/entities/Provider/Provider';
+
+// Additional interfaces for component state
+interface RatingDistributionItem {
+  rating: number;
+  count: number;
+  percentage: number;
+}
+
 const Reviews = () => {
-  const [selectedRating, setSelectedRating] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [replyDialogOpen, setReplyDialogOpen] = useState(false);
-  const [selectedReview, setSelectedReview] = useState<any>(null);
-  const [replyText, setReplyText] = useState('');
+  const [selectedRating, setSelectedRating] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [replyDialogOpen, setReplyDialogOpen] = useState<boolean>(false);
+  const [selectedReview, setSelectedReview] = useState<ProviderReview | null>(null);
+  const [replyText, setReplyText] = useState<string>('');
   
-  const { data: reviewsData, isLoading } = useProviderReviews({
+  // Properly typed query parameters
+  const reviewsQueryParams: ProviderReviewsParams = {
     page: currentPage,
     limit: 10,
     rating: selectedRating === 'all' ? undefined : parseInt(selectedRating),
-  });
+  };
 
-  const { data: dashboardData } = useProviderDashboard();
+  const { data: reviewsData, isLoading } = useProviderReviews(reviewsQueryParams) as {
+    data?: ProviderReviewsResponse;
+    isLoading: boolean;
+  };
+
+  const { data: dashboardData } = useProviderDashboard() as {
+    data?: ProviderDashboardData;
+  };
+  
   const replyMutation = useReplyToReview();
 
-  const handleReply = async () => {
+  const handleReply = async (): Promise<void> => {
     if (!selectedReview || !replyText.trim()) {
       toast.error('Please enter a reply');
       return;
     }
 
+    const replyRequest: ReplyToReviewRequest = {
+      id: selectedReview._id,
+      reply: replyText
+    };
+
     try {
-      await replyMutation.mutateAsync({
-        id: selectedReview._id,
-        reply: replyText
-      });
+      await replyMutation.mutateAsync(replyRequest);
       setReplyDialogOpen(false);
       setSelectedReview(null);
       setReplyText('');
+      toast.success('Reply sent successfully');
     } catch (error) {
       console.error('Reply failed:', error);
+      toast.error('Failed to send reply');
     }
   };
 
-  const openReplyDialog = (review: any) => {
+  const openReplyDialog = (review: ProviderReview): void => {
     setSelectedReview(review);
     setReplyText(review.providerReply || '');
     setReplyDialogOpen(true);
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string): string => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const renderStars = (rating: number) => {
+  const renderStars = (rating: number): React.ReactElement[] => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
@@ -86,14 +113,30 @@ const Reviews = () => {
     ));
   };
 
-  // Mock rating distribution data
-  const ratingDistribution = [
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // Mock rating distribution data - in real app, this should come from API
+  const ratingDistribution: RatingDistributionItem[] = [
     { rating: 5, count: 45, percentage: 60 },
     { rating: 4, count: 20, percentage: 27 },
     { rating: 3, count: 8, percentage: 11 },
     { rating: 2, count: 2, percentage: 3 },
     { rating: 1, count: 0, percentage: 0 },
   ];
+
+  const getRatingText = (average: number): string => {
+    if (average >= 4.5) return 'Excellent rating!';
+    if (average >= 4.0) return 'Great rating!';
+    if (average >= 3.5) return 'Good rating!';
+    if (average >= 3.0) return 'Average rating';
+    return 'Needs improvement';
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
@@ -123,7 +166,9 @@ const Reviews = () => {
               </p>
               <div className="flex items-center justify-center mt-2 text-yellow-200">
                 <TrendingUp className="w-4 h-4 mr-1" />
-                <span className="text-sm">Excellent rating!</span>
+                <span className="text-sm">
+                  {getRatingText(dashboardData?.rating?.average || 4.8)}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -135,7 +180,7 @@ const Reviews = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {ratingDistribution.map((item) => (
+              {ratingDistribution.map((item: RatingDistributionItem) => (
                 <div key={item.rating} className="flex items-center space-x-3">
                   <div className="flex items-center space-x-1 w-12">
                     <span className="text-sm font-medium">{item.rating}</span>
@@ -196,7 +241,7 @@ const Reviews = () => {
             </Card>
           ))
         ) : (
-          reviewsData?.reviews?.map((review: any) => (
+          reviewsData?.reviews?.map((review: ProviderReview) => (
             <Card key={review._id} className="border border-gray-200 shadow-sm rounded-2xl hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start space-x-4">
@@ -216,7 +261,7 @@ const Reviews = () => {
                             {renderStars(review.rating)}
                           </div>
                           <span className="text-sm text-gray-500">
-                            {new Date(review.createdAt).toLocaleDateString()}
+                            {formatDate(review.createdAt)}
                           </span>
                         </div>
                       </div>
@@ -238,9 +283,11 @@ const Reviews = () => {
                           <div className="flex-1">
                             <p className="text-sm font-medium text-blue-900 mb-1">Your Reply:</p>
                             <p className="text-sm text-blue-800">{review.providerReply}</p>
-                            <p className="text-xs text-blue-600 mt-1">
-                              {new Date(review.providerReplyAt).toLocaleDateString()}
-                            </p>
+                            {review.providerReplyAt && (
+                              <p className="text-xs text-blue-600 mt-1">
+                                {formatDate(review.providerReplyAt)}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -249,7 +296,7 @@ const Reviews = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => openReplyDialog(review)}
-                        className="mt-2"
+                        className="mt-2 border-[#1EC6D9] text-[#1EC6D9] hover:bg-[#1EC6D9] hover:text-white"
                       >
                         <MessageCircle className="w-4 h-4 mr-2" />
                         Reply to Review
@@ -262,7 +309,7 @@ const Reviews = () => {
           ))
         )}
         
-            {!isLoading && reviewsData?.reviews?.length === 0 && (
+        {!isLoading && (!reviewsData?.reviews || reviewsData.reviews.length === 0) && (
           <Card className="border border-gray-200 shadow-sm rounded-2xl">
             <CardContent className="p-12 text-center">
               <Star className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -287,6 +334,7 @@ const Reviews = () => {
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
+                  className="border-[#1EC6D9] text-[#1EC6D9] hover:bg-[#1EC6D9] hover:text-white"
                 >
                   Previous
                 </Button>
@@ -295,6 +343,7 @@ const Reviews = () => {
                   size="sm"
                   onClick={() => setCurrentPage(prev => prev + 1)}
                   disabled={currentPage >= reviewsData.pagination.total}
+                  className="border-[#1EC6D9] text-[#1EC6D9] hover:bg-[#1EC6D9] hover:text-white"
                 >
                   Next
                 </Button>
@@ -306,7 +355,7 @@ const Reviews = () => {
 
       {/* Reply Dialog */}
       <Dialog open={replyDialogOpen} onOpenChange={setReplyDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Reply to Review</DialogTitle>
             <DialogDescription>
@@ -318,12 +367,14 @@ const Reviews = () => {
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-2 mb-2">
-                  <strong>{selectedReview.customer?.name}</strong>
+                  <strong className="text-gray-900">{selectedReview.customer?.name}</strong>
                   <div className="flex items-center space-x-1">
                     {renderStars(selectedReview.rating)}
                   </div>
                 </div>
-                <p className="text-gray-700">{selectedReview.comment}</p>
+                {selectedReview.comment && (
+                  <p className="text-gray-700 text-sm">{selectedReview.comment}</p>
+                )}
               </div>
               
               <div>
@@ -342,13 +393,17 @@ const Reviews = () => {
           )}
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setReplyDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setReplyDialogOpen(false)}
+              disabled={replyMutation.isPending}
+            >
               Cancel
             </Button>
             <Button 
               onClick={handleReply}
-              disabled={replyMutation.isPending}
-              className="bg-gradient-to-r from-[#1EC6D9] to-[#16A8B8]"
+              disabled={replyMutation.isPending || !replyText.trim()}
+              className="bg-gradient-to-r from-[#1EC6D9] to-[#16A8B8] hover:from-[#16A8B8] hover:to-[#128A96]"
             >
               {replyMutation.isPending ? 'Sending...' : 'Send Reply'}
             </Button>

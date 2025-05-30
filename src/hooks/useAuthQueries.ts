@@ -7,10 +7,11 @@ import {
   sendVerificationEmail,
   verifyEmailToken 
 } from '@/instance/Auth';
-import { LoginRequest, RegisterRequest } from '@/domain/entities/Auth/Auth';
+import type { LoginRequest, RegisterRequest } from '@/domain/entities';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 import Cookies from 'js-cookie';
+import { useRouter } from 'next/navigation';
 
 // Query Keys
 export const authKeys = {
@@ -28,8 +29,8 @@ export const useCurrentUser = () => {
     queryFn: getCurrentUser,
     enabled: isAuthenticated && !!(Cookies.get('token') || localStorage.getItem('auth_token')),
     staleTime: 1000 * 60 * 5, // 5 minutes
-    retry: (failureCount, error: any) => {
-      if (error?.response?.status === 401) return false;
+    retry: (failureCount, error: Error) => {
+      if ((error as unknown as { response?: { status?: number } })?.response?.status === 401) return false;
       return failureCount < 2;
     },
   });
@@ -39,6 +40,7 @@ export const useCurrentUser = () => {
 export const useLogin = () => {
   const queryClient = useQueryClient();
   const { updateUser } = useAuthStore();
+  const router = useRouter();
 
   return useMutation({
     mutationFn: (data: LoginRequest) => loginUser(data),
@@ -47,16 +49,29 @@ export const useLogin = () => {
       updateUser(data.user);
       
       // Set user data in query cache
-      queryClient.setQueryData(authKeys.profile(), { user: data.user });
+      queryClient.setQueryData(authKeys.profile(), data.user);
       
       // Prefetch related data if needed
       queryClient.invalidateQueries({ queryKey: authKeys.all });
       
       toast.success('Login successful!');
+      
+      // Redirect based on role
+      switch (data.user.role) {
+        case 'admin':
+          router.push('/admin-dashboard');
+          break;
+        case 'provider':
+          router.push('/provider-dashboard');
+          break;
+        case 'user':
+        default:
+          router.push('/user-dashboard');
+          break;
+      }
     },
-    onError: (error: any) => {
-      const message = error?.message || 'Login failed';
-      toast.error(message);
+    onError: (error: Error) => {
+      toast.error(error.message || 'Login failed');
     },
   });
 };
@@ -65,6 +80,7 @@ export const useLogin = () => {
 export const useRegister = () => {
   const queryClient = useQueryClient();
   const { updateUser } = useAuthStore();
+  const router = useRouter();
 
   return useMutation({
     mutationFn: (data: RegisterRequest) => registerUser(data),
@@ -73,16 +89,26 @@ export const useRegister = () => {
       updateUser(data.user);
       
       // Set user data in query cache
-      queryClient.setQueryData(authKeys.profile(), { user: data.user });
+      queryClient.setQueryData(authKeys.profile(), data.user);
       
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: authKeys.all });
       
       toast.success('Account created successfully! Please verify your email.');
+      
+      // Redirect based on role
+      switch (data.user.role) {
+        case 'provider':
+          router.push('/provider-dashboard');
+          break;
+        case 'user':
+        default:
+          router.push('/user-dashboard');
+          break;
+      }
     },
-    onError: (error: any) => {
-      const message = error?.message || 'Registration failed';
-      toast.error(message);
+    onError: (error: Error) => {
+      toast.error(error.message || 'Registration failed');
     },
   });
 };
@@ -90,10 +116,15 @@ export const useRegister = () => {
 // Logout Mutation
 export const useLogout = () => {
   const queryClient = useQueryClient();
+  const { logout: authLogout } = useAuthStore();
+  const router = useRouter();
 
   return useMutation({
     mutationFn: logoutUser,
     onSuccess: () => {
+      // Clear auth store
+      authLogout();
+      
       // Clear all queries
       queryClient.clear();
       
@@ -101,11 +132,16 @@ export const useLogout = () => {
       queryClient.removeQueries({ queryKey: authKeys.all });
       
       toast.success('Logged out successfully');
+      
+      // Redirect to home
+      router.push('/');
     },
-    onError: (error: any) => {
+    onError: () => {
       // Still clear cache even if logout API fails
+      authLogout();
       queryClient.clear();
-      toast.error('Logout failed, but you have been signed out locally');
+      router.push('/');
+      toast.success('Logged out successfully');
     },
   });
 };
@@ -121,9 +157,8 @@ export const useSendVerificationEmail = () => {
         toast.info('Check console for email preview link (development mode)');
       }
     },
-    onError: (error: any) => {
-      const message = error?.message || 'Failed to send verification email';
-      toast.error(message);
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to send verification email');
     },
   });
 };
@@ -138,7 +173,7 @@ export const useVerifyEmail = () => {
     onSuccess: (data) => {
       // Update user in store and cache
       updateUser(data.user);
-      queryClient.setQueryData(authKeys.profile(), { user: data.user });
+      queryClient.setQueryData(authKeys.profile(), data.user);
       
       // Invalidate user queries to refetch latest data
       queryClient.invalidateQueries({ queryKey: authKeys.profile() });
@@ -149,9 +184,8 @@ export const useVerifyEmail = () => {
         toast.success('Email verified successfully! Welcome to ServiceHub!');
       }
     },
-    onError: (error: any) => {
-      const message = error?.message || 'Failed to verify email';
-      toast.error(message);
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to verify email');
     },
   });
 };

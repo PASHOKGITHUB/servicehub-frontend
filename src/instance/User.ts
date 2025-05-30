@@ -1,66 +1,60 @@
 import ApiClient from "@/lib/apiClient";
-import { 
-  BrowseServicesRequest, 
-  BrowseServicesResponse, 
-  Service 
-} from "@/domain/entities/User/Service";
-import { 
-  CreateBookingRequest, 
-  Booking, 
-  GetBookingsRequest, 
-  BookingsResponse 
-} from "@/domain/entities/User/Booking";
-import { 
-  CreateReviewRequest, 
-  UpdateReviewRequest, 
-  Review, 
-  ReviewsResponse 
-} from "@/domain/entities/User/Review";
-import { UserDashboard } from "@/domain/entities/User/Dashboard";
+import type {
+  UserDashboardData,
+  BrowseServicesParams,
+  BrowseServicesResponse,
+  ServiceDetailsResponse,
+  CreateBookingRequest,
+  UserBookingsParams,
+  UserBookingsResponse,
+  CreateReviewRequest,
+  UserReviewsParams,
+  UserReviewsResponse,
+  UpdateReviewRequest,
+  ApiResponse
+} from "@/domain/entities";
 
-// Dashboard
-export const getUserDashboard = async (): Promise<UserDashboard> => {
+export const getUserDashboard = async (): Promise<UserDashboardData> => {
   try {
-    const response = await ApiClient.get('/user/dashboard');
+    const response = await ApiClient.get<ApiResponse<UserDashboardData>>('/user/dashboard');
     return response.data.data;
-  } catch (error: any) {
-    const message = error?.response?.data?.message || 'Failed to fetch dashboard';
+  } catch (error: unknown) {
+    const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to fetch dashboard data';
     throw new Error(message);
   }
 };
 
-// Services
-export const browseServices = async (params: BrowseServicesRequest): Promise<BrowseServicesResponse> => {
+export const browseServices = async (params: BrowseServicesParams): Promise<BrowseServicesResponse> => {
   try {
-    const response = await ApiClient.get('/user/services', { params });
+    const response = await ApiClient.get<ApiResponse<BrowseServicesResponse>>('/user/services', { params });
     return response.data.data;
-  } catch (error: any) {
-    const message = error?.response?.data?.message || 'Failed to browse services';
+  } catch (error: unknown) {
+    const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to fetch services';
     throw new Error(message);
   }
 };
 
-export const getServiceDetails = async (serviceId: string): Promise<{ service: Service; reviews: Review[] }> => {
+export const getServiceDetails = async (serviceId: string): Promise<ServiceDetailsResponse> => {
   try {
-    const response = await ApiClient.get(`/user/services/${serviceId}`);
+    const response = await ApiClient.get<ApiResponse<ServiceDetailsResponse>>(`/user/services/${serviceId}`);
     return response.data.data;
-  } catch (error: any) {
-    const message = error?.response?.data?.message || 'Failed to fetch service details';
+  } catch (error: unknown) {
+    const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to fetch service details';
     throw new Error(message);
   }
 };
 
-// Bookings
-export const createBooking = async (data: CreateBookingRequest): Promise<Booking> => {
+export const createBooking = async (data: CreateBookingRequest): Promise<UserBookingsResponse> => {
   try {
-    const response = await ApiClient.post('/user/bookings', data);
-    return response.data.data.booking;
-  } catch (error: any) {
-    const message = error?.response?.data?.message || 'Failed to create booking';
-    const errors = error?.response?.data?.errors || [];
+    const response = await ApiClient.post<ApiResponse<UserBookingsResponse>>('/user/bookings', data);
+    return response.data.data;
+  } catch (error: unknown) {
+    const apiError = error as { response?: { data?: { message?: string; errors?: Array<{ field: string; message: string }> } } };
+    const message = apiError?.response?.data?.message || 'Failed to create booking';
+    const errors = apiError?.response?.data?.errors || [];
     
     if (errors.length > 0) {
-      const errorMessage = errors.map((err: any) => `${err.field}: ${err.message}`).join(', ');
+      const errorMessage = errors.map((err) => `${err.field}: ${err.message}`).join(', ');
       throw new Error(errorMessage);
     }
     
@@ -68,67 +62,49 @@ export const createBooking = async (data: CreateBookingRequest): Promise<Booking
   }
 };
 
-export const getUserBookings = async (params: GetBookingsRequest): Promise<BookingsResponse> => {
+export const getUserBookings = async (params: UserBookingsParams): Promise<UserBookingsResponse> => {
   try {
-    const response = await ApiClient.get('/user/bookings', { params });
+    const response = await ApiClient.get<ApiResponse<UserBookingsResponse>>('/user/bookings', { params });
     return response.data.data;
-  } catch (error: any) {
-    const message = error?.response?.data?.message || 'Failed to fetch bookings';
+  } catch (error: unknown) {
+    const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to fetch bookings';
     throw new Error(message);
   }
 };
 
-export const cancelBooking = async (bookingId: string, cancelReason?: string): Promise<Booking> => {
+export const cancelBooking = async (bookingId: string, cancelReason?: string): Promise<void> => {
   try {
-    const response = await ApiClient.put(`/user/bookings/${bookingId}/cancel`, { cancelReason });
-    return response.data.data.booking;
-  } catch (error: any) {
-    const message = error?.response?.data?.message || 'Failed to cancel booking';
+    await ApiClient.put(`/user/bookings/${bookingId}/cancel`, { cancelReason });
+  } catch (error: unknown) {
+    const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to cancel booking';
     throw new Error(message);
   }
 };
 
-// Reviews
-export const createReview = async (data: CreateReviewRequest): Promise<Review> => {
+export const createReview = async (data: CreateReviewRequest): Promise<void> => {
   try {
-    const response = await ApiClient.post('/user/reviews', data);
-    return response.data.data.review;
-  } catch (error: any) {
-    const message = error?.response?.data?.message || 'Failed to create review';
-    const errors = error?.response?.data?.errors || [];
-    
-    if (errors.length > 0) {
-      const errorMessage = errors.map((err: any) => `${err.field}: ${err.message}`).join(', ');
-      throw new Error(errorMessage);
-    }
-    
+    await ApiClient.post('/user/reviews', data);
+  } catch (error: unknown) {
+    const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to create review';
     throw new Error(message);
   }
 };
 
-export const getUserReviews = async (params: any = {}): Promise<ReviewsResponse> => {
+export const getUserReviews = async (params: UserReviewsParams): Promise<UserReviewsResponse> => {
   try {
-    const response = await ApiClient.get('/user/reviews', { params });
+    const response = await ApiClient.get<ApiResponse<UserReviewsResponse>>('/user/reviews', { params });
     return response.data.data;
-  } catch (error: any) {
-    const message = error?.response?.data?.message || 'Failed to fetch reviews';
+  } catch (error: unknown) {
+    const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to fetch reviews';
     throw new Error(message);
   }
 };
 
-export const updateReview = async (reviewId: string, data: UpdateReviewRequest): Promise<Review> => {
+export const updateReview = async (reviewId: string, data: UpdateReviewRequest['data']): Promise<void> => {
   try {
-    const response = await ApiClient.put(`/user/reviews/${reviewId}`, data);
-    return response.data.data.review;
-  } catch (error: any) {
-    const message = error?.response?.data?.message || 'Failed to update review';
-    const errors = error?.response?.data?.errors || [];
-    
-    if (errors.length > 0) {
-      const errorMessage = errors.map((err: any) => `${err.field}: ${err.message}`).join(', ');
-      throw new Error(errorMessage);
-    }
-    
+    await ApiClient.put(`/user/reviews/${reviewId}`, data);
+  } catch (error: unknown) {
+    const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to update review';
     throw new Error(message);
   }
 };
@@ -136,8 +112,10 @@ export const updateReview = async (reviewId: string, data: UpdateReviewRequest):
 export const deleteReview = async (reviewId: string): Promise<void> => {
   try {
     await ApiClient.delete(`/user/reviews/${reviewId}`);
-  } catch (error: any) {
-    const message = error?.response?.data?.message || 'Failed to delete review';
+  } catch (error: unknown) {
+    const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to delete review';
     throw new Error(message);
   }
 };
+
+  

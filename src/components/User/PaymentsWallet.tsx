@@ -1,8 +1,8 @@
 'use client';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CreditCard, Wallet, Plus, History } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 
 const PaymentsWallet = () => {
   return (

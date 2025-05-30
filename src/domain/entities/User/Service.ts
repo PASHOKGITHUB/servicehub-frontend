@@ -1,15 +1,18 @@
-export interface ServiceCategory {
-  _id: string;
-  name: string;
-  description: string;
-  icon: string;
-  slug: string;
-  isActive: boolean;
-  sortOrder: number;
-  servicesCount?: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// export interface ServiceCategory {
+//   _id: string;
+//   name: string;
+//   description: string;
+//   icon: string;
+//   slug: string;
+//   isActive: boolean;
+//   sortOrder: number;
+//   servicesCount?: number;
+//   createdAt: Date;
+//   updatedAt: Date;
+// }
+
+import { ServiceCategory } from "../Admin/Admin";
+
 
 export interface Service {
   _id: string;

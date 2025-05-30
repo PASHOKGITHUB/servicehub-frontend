@@ -11,16 +11,17 @@ import {
   Phone, 
   Mail,
   Calendar,
-  IndianRupee
 } from 'lucide-react';
 import { useServiceDetails } from '@/hooks/useUserQueries';
 import { formatCurrency } from '@/lib/formatters';
-
+import { useRouter } from 'next/navigation';
 interface ServiceDetailsProps {
   serviceId: string;
 }
 
 const ServiceDetails = ({ serviceId }: ServiceDetailsProps) => {
+
+  const router = useRouter();
   const { data, isLoading, error } = useServiceDetails(serviceId);
 
   if (isLoading) {
@@ -141,7 +142,7 @@ const ServiceDetails = ({ serviceId }: ServiceDetailsProps) => {
               <Button 
                 className="w-full" 
                 size="lg"
-                onClick={() => window.location.href = `/user/book-service/${service?._id}`}
+                onClick={() => router.push(`/user/book-service/${service?._id}`)}
               >
                 <Calendar className="w-4 h-4 mr-2" />
                 Book This Service
@@ -178,7 +179,7 @@ const ServiceDetails = ({ serviceId }: ServiceDetailsProps) => {
                           />
                         ))}
                       </div>
-                      <span className="font-medium">{review.customer}</span>
+                      <span className="font-medium">{review.customer?.name}</span>
                     </div>
                     <span className="text-sm text-gray-500">
                       {new Date(review.createdAt).toLocaleDateString()}

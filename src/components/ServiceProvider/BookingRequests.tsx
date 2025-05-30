@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,57 +33,110 @@ import {
 } from '@/hooks/useProviderQueries';
 import { toast } from 'sonner';
 
+// Import existing types from domain entities
+import type { 
+  ProviderBooking,
+  ProviderBookingsParams,
+  ProviderBookingsResponse,
+  UpdateBookingStatusRequest
+} from '@/domain/entities/Provider/Provider';
+
 interface BookingRequestsProps {
   status?: string;
 }
 
-const BookingRequests = ({ status = 'all' }: BookingRequestsProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState(status);
-  const [currentPage, setCurrentPage] = useState(1);
+// Status variant type for badge styling
+type BookingStatusVariant = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+
+const BookingRequests: React.FC<BookingRequestsProps> = ({ status = 'all' }) => {
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>(status);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   
-  const { data: bookingsData, isLoading } = useProviderBookings({
+  // Properly typed query parameters
+  const queryParams: ProviderBookingsParams = {
     page: currentPage,
     limit: 10,
     status: selectedStatus === 'all' ? undefined : selectedStatus,
     // search: searchTerm || undefined, // Backend might not support search
-  });
+  };
+
+  const { data: bookingsData, isLoading } = useProviderBookings(queryParams) as {
+    data?: ProviderBookingsResponse;
+    isLoading: boolean;
+  };
 
   const updateBookingMutation = useUpdateBookingStatus();
 
-  const handleStatusUpdate = async (bookingId: string, newStatus: string, notes?: string) => {
+  const handleStatusUpdate = async (bookingId: string, newStatus: string, notes?: string): Promise<void> => {
+    const updateRequest: UpdateBookingStatusRequest = {
+      id: bookingId,
+      status: newStatus,
+      providerNotes: notes
+    };
+
     try {
-      await updateBookingMutation.mutateAsync({
-        id: bookingId,
-        status: newStatus,
-        providerNotes: notes
-      });
+      await updateBookingMutation.mutateAsync(updateRequest);
+      toast.success(`Booking ${newStatus.replace('_', ' ').toLowerCase()} successfully`);
     } catch (error) {
       console.error('Status update failed:', error);
+      toast.error('Failed to update booking status');
     }
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string): string => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
+  const getStatusBadge = (status: string): string => {
+    const variants: Record<BookingStatusVariant, string> = {
       pending: 'bg-yellow-100 text-yellow-700',
       confirmed: 'bg-blue-100 text-blue-700',
       in_progress: 'bg-purple-100 text-purple-700',
       completed: 'bg-green-100 text-green-700',
       cancelled: 'bg-red-100 text-red-700'
     };
-    return variants[status as keyof typeof variants] || variants.pending;
+    return variants[status as BookingStatusVariant] || variants.pending;
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatStatusDisplay = (status: string): string => {
+    return status.replace('_', ' ').toUpperCase();
+  };
+
+  const handleCallCustomer = (phone?: string): void => {
+    if (phone) {
+      window.open(`tel:${phone}`);
+    } else {
+      toast.error('Customer phone number not available');
+    }
+  };
+
+  const handleEmailCustomer = (email: string): void => {
+    if (email) {
+      window.open(`mailto:${email}`);
+    } else {
+      toast.error('Customer email not available');
+    }
+  };
+
+  const handleSendMessage = (): void => {
+    toast.info('Chat feature coming soon');
   };
 
   return (
@@ -145,7 +198,7 @@ const BookingRequests = ({ status = 'all' }: BookingRequestsProps) => {
             </Card>
           ))
         ) : (
-          bookingsData?.bookings?.map((booking: any) => (
+          bookingsData?.bookings?.map((booking: ProviderBooking) => (
             <Card key={booking._id} className="border border-gray-200 shadow-sm rounded-2xl hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
@@ -161,7 +214,7 @@ const BookingRequests = ({ status = 'all' }: BookingRequestsProps) => {
                       <div className="flex items-center space-x-2 mb-2">
                         <h3 className="font-semibold text-gray-900">{booking.service?.name}</h3>
                         <Badge className={getStatusBadge(booking.status)}>
-                          {booking.status.replace('_', ' ').toUpperCase()}
+                          {formatStatusDisplay(booking.status)}
                         </Badge>
                       </div>
                       
@@ -172,7 +225,7 @@ const BookingRequests = ({ status = 'all' }: BookingRequestsProps) => {
                         </div>
                         <div className="flex items-center space-x-2">
                           <Calendar className="w-4 h-4" />
-                          <span>{new Date(booking.bookingDate).toLocaleDateString()} at {booking.timeSlot}</span>
+                          <span>{formatDate(booking.bookingDate)} at {booking.timeSlot}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <MapPin className="w-4 h-4" />
@@ -249,15 +302,15 @@ const BookingRequests = ({ status = 'all' }: BookingRequestsProps) => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => window.open(`tel:${booking.customer?.phone}`)}>
+                        <DropdownMenuItem onClick={() => handleCallCustomer(booking.customer?.phone)}>
                           <Phone className="w-4 h-4 mr-2" />
                           Call Customer
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => window.open(`mailto:${booking.customer?.email}`)}>
+                        <DropdownMenuItem onClick={() => handleEmailCustomer(booking.customer?.email)}>
                           <Mail className="w-4 h-4 mr-2" />
                           Email Customer
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info('Chat feature coming soon')}>
+                        <DropdownMenuItem onClick={handleSendMessage}>
                           <MessageCircle className="w-4 h-4 mr-2" />
                           Send Message
                         </DropdownMenuItem>
@@ -270,7 +323,7 @@ const BookingRequests = ({ status = 'all' }: BookingRequestsProps) => {
           ))
         )}
         
-        {!isLoading && bookingsData?.bookings?.length === 0 && (
+        {!isLoading && (!bookingsData?.bookings || bookingsData.bookings.length === 0) && (
           <Card className="border border-gray-200 shadow-sm rounded-2xl">
             <CardContent className="p-12 text-center">
               <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -299,6 +352,7 @@ const BookingRequests = ({ status = 'all' }: BookingRequestsProps) => {
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
+                  className="border-[#1EC6D9] text-[#1EC6D9] hover:bg-[#1EC6D9] hover:text-white"
                 >
                   Previous
                 </Button>
@@ -307,6 +361,7 @@ const BookingRequests = ({ status = 'all' }: BookingRequestsProps) => {
                   size="sm"
                   onClick={() => setCurrentPage(prev => prev + 1)}
                   disabled={currentPage >= bookingsData.pagination.total}
+                  className="border-[#1EC6D9] text-[#1EC6D9] hover:bg-[#1EC6D9] hover:text-white"
                 >
                   Next
                 </Button>

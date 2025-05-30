@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User } from '@/domain/entities/Auth/User';
+import type { User } from '@/domain/entities';
 import Cookies from 'js-cookie';
 
 interface AuthState {
@@ -103,7 +103,12 @@ export const useAuthStore = create<AuthState>()(
 
 // Debug utilities for development only
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-  (window as any).debugAuthStore = {
+  interface DebugAuthStore {
+    getState: () => AuthState;
+    clearAll: () => void;
+  }
+  
+  (window as typeof window & { debugAuthStore?: DebugAuthStore }).debugAuthStore = {
     getState: () => useAuthStore.getState(),
     clearAll: () => {
       Cookies.remove('token', { path: '/' });

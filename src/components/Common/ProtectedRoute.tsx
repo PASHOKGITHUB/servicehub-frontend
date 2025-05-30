@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useCurrentUser } from '@/hooks/useAuthQueries';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, Mail, Loader2 } from 'lucide-react';
+import { Mail } from 'lucide-react';
+import { PageLoading } from '@/components/ui/page-loading';
 import EmailVerificationBanner from './EmailVerificationBanner';
 
 interface ProtectedRouteProps {
@@ -15,19 +16,19 @@ interface ProtectedRouteProps {
   requireEmailVerification?: boolean;
 }
 
-const ProtectedRoute = ({ 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
   allowedRoles,
   requireEmailVerification = true 
-}: ProtectedRouteProps) => {
+}) => {
   const router = useRouter();
   const { user, isAuthenticated, logout, isInitialized, initialize } = useAuthStore();
-  const { data: currentUserData, isLoading: isLoadingUser, error: userError } = useCurrentUser();
-  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const { isLoading: isLoadingUser, error: userError } = useCurrentUser();
+  const [hasCheckedAuth, setHasCheckedAuth] = useState<boolean>(false);
 
   // Initialize auth store when component mounts
   useEffect(() => {
-    const initializeAuth = async () => {
+    const initializeAuth = async (): Promise<void> => {
       if (!isInitialized) {
         initialize();
       }
@@ -38,7 +39,7 @@ const ProtectedRoute = ({
   }, [isInitialized, initialize]);
 
   // Handle redirects after auth check is complete
-  const handleRedirects = useCallback(() => {
+  const handleRedirects = useCallback((): void => {
     if (!hasCheckedAuth || !isInitialized || isLoadingUser) {
       return;
     }
@@ -80,47 +81,24 @@ const ProtectedRoute = ({
   // Still checking auth or loading
   if (!hasCheckedAuth || !isInitialized || isLoadingUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center p-8">
-          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-blue-500" />
-          <h2 className="text-xl font-semibold mb-2 text-gray-800">Loading...</h2>
-          <p className="text-gray-600 mb-4">
-            {!hasCheckedAuth || !isInitialized ? 'Initializing authentication...' : 'Verifying your session...'}
-          </p>
-          <div className="bg-gray-100 rounded-lg p-4 max-w-md mx-auto">
-            <p className="text-sm text-gray-500">
-              This should only take a moment. If you continue to see this screen, 
-              please refresh the page or clear your browser cache.
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageLoading 
+        title="Loading..." 
+        subtitle={!hasCheckedAuth || !isInitialized ? 'Initializing authentication...' : 'Verifying your session...'}
+      />
     );
   }
 
   // Not authenticated or user error
   if (userError || !isAuthenticated || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center p-8">
-          <Shield className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-          <h2 className="text-xl font-semibold mb-2 text-gray-800">Redirecting...</h2>
-          <p className="text-gray-600">Taking you to the login page...</p>
-        </div>
-      </div>
+      <PageLoading title="Redirecting..." subtitle="Taking you to the login page..." />
     );
   }
 
   // Wrong role
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center p-8">
-          <Shield className="w-12 h-12 mx-auto mb-4 text-blue-500" />
-          <h2 className="text-xl font-semibold mb-2 text-gray-800">Redirecting...</h2>
-          <p className="text-gray-600">Taking you to your dashboard...</p>
-        </div>
-      </div>
+      <PageLoading title="Redirecting..." subtitle="Taking you to your dashboard..." />
     );
   }
 
@@ -145,7 +123,7 @@ const ProtectedRoute = ({
               <Button
                 variant="outline"
                 onClick={() => logout()}
-                className="w-full"
+                className="w-full border-[#1EC6D9] text-[#1EC6D9] hover:bg-[#1EC6D9] hover:text-white"
               >
                 Sign Out
               </Button>

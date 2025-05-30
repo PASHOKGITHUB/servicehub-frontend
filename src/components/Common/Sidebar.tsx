@@ -126,6 +126,8 @@ const Sidebar = ({ role }: SidebarProps) => {
       });
     } catch (error) {
       toast.error('Failed to logout');
+      console.log('Logout error:', error);
+      
     }
   };
 

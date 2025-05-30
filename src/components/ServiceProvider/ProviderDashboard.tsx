@@ -15,22 +15,40 @@ import {
   CheckCircle,
   AlertTriangle,
   Plus,
-  Eye
 } from 'lucide-react';
 import { useProviderDashboard } from '@/hooks/useProviderQueries';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
+// Import existing type definitions
+import type { 
+  ProviderDashboardData,
+  ProviderBooking
+} from '@/domain/entities/Provider/Provider';
+
+// Additional type for auth store user
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  avatar?: string;
+}
+
 const ProviderDashboard = () => {
-  const { user } = useAuthStore();
+  const { user } = useAuthStore() as { user: User | null };
   const router = useRouter();
-  const { data: dashboardData, isLoading, error } = useProviderDashboard();
+  const { data: dashboardData, isLoading, error } = useProviderDashboard() as {
+    data?: ProviderDashboardData;
+    isLoading: boolean;
+    error: unknown;
+  };
 
   if (!user) {
     return null;
   }
 
-  const handleNavigate = (path: string) => {
+  const handleNavigate = (path: string): void => {
     if (path === '#') {
       toast.info('This feature is under development');
     } else {
@@ -70,12 +88,41 @@ const ProviderDashboard = () => {
     );
   }
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const getBookingStatusColor = (status: string): string => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'completed':
+        return 'bg-green-100 text-green-700';
+      case 'confirmed':
+        return 'bg-blue-100 text-blue-700';
+      case 'cancelled':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const calculateCompletionRate = (): number => {
+    if (!dashboardData?.bookings?.total || !dashboardData?.bookings?.completed) {
+      return 0;
+    }
+    return Math.round((dashboardData.bookings.completed / dashboardData.bookings.total) * 100);
+  };
+
+  const calculateAverageEarningsPerService = (): number => {
+    if (!dashboardData?.earnings?.total || !dashboardData?.bookings?.completed) {
+      return 0;
+    }
+    return dashboardData.earnings.total / dashboardData.bookings.completed;
   };
 
   return (
@@ -86,7 +133,7 @@ const ProviderDashboard = () => {
           Provider Dashboard
         </h1>
         <p className="text-gray-600 text-sm sm:text-base">
-          Welcome back, {user.name}! Here's your business overview.
+          Welcome back, {user.name}! Here&apos;s your business overview.
         </p>
       </div>
 
@@ -98,11 +145,11 @@ const ProviderDashboard = () => {
               <div>
                 <p className="text-blue-100 text-xs sm:text-sm font-medium">My Services</p>
                 <p className="text-2xl sm:text-3xl font-bold">
-                  {dashboardData?.services?.total || '0'}
+                  {dashboardData?.services?.total || 0}
                 </p>
                 <div className="flex items-center mt-2 text-xs text-blue-200">
                   <TrendingUp className="w-3 h-3 mr-1" />
-                  <span>Active: {dashboardData?.services?.active || '0'}</span>
+                  <span>Active: {dashboardData?.services?.active || 0}</span>
                 </div>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-400 rounded-full flex items-center justify-center">
@@ -118,14 +165,14 @@ const ProviderDashboard = () => {
               <div>
                 <p className="text-green-100 text-xs sm:text-sm font-medium">Total Bookings</p>
                 <p className="text-2xl sm:text-3xl font-bold">
-                  {dashboardData?.bookings?.total?.toLocaleString() || '0'}
+                  {dashboardData?.bookings?.total?.toLocaleString() || 0}
                 </p>
                 <div className="flex items-center mt-2 text-xs">
                   <span className="text-yellow-200 mr-2">
-                    Pending: {dashboardData?.bookings?.pending || '0'}
+                    Pending: {dashboardData?.bookings?.pending || 0}
                   </span>
                   <span className="text-green-200">
-                    Done: {dashboardData?.bookings?.completed || '0'}
+                    Done: {dashboardData?.bookings?.completed || 0}
                   </span>
                 </div>
               </div>
@@ -166,7 +213,7 @@ const ProviderDashboard = () => {
                 </p>
                 <div className="flex items-center mt-2 text-xs text-yellow-200">
                   <Star className="w-3 h-3 mr-1" />
-                  <span>{dashboardData?.rating?.totalReviews || '0'} Reviews</span>
+                  <span>{dashboardData?.rating?.totalReviews || 0} Reviews</span>
                 </div>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-400 rounded-full flex items-center justify-center">
@@ -196,27 +243,25 @@ const ProviderDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3 sm:space-y-4">
-              {dashboardData?.recentBookings?.slice(0, 3).map((booking: any) => (
-                <div key={booking._id} className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-2xl">
-                  <div className="flex items-center space-x-3 flex-1 min-w-0">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-100">
-                      <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+              {dashboardData?.recentBookings && dashboardData.recentBookings.length > 0 ? (
+                dashboardData.recentBookings.slice(0, 3).map((booking: ProviderBooking) => (
+                  <div key={booking._id} className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-2xl">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-blue-100">
+                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-gray-900 text-sm sm:text-base">{booking.service?.name}</p>
+                        <p className="text-xs sm:text-sm text-gray-500 truncate">{booking.customer?.name}</p>
+                        <p className="text-xs text-gray-400">{new Date(booking.bookingDate).toLocaleDateString()}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 text-sm sm:text-base">{booking.service?.name}</p>
-                      <p className="text-xs sm:text-sm text-gray-500 truncate">{booking.customer?.name}</p>
-                      <p className="text-xs text-gray-400">{new Date(booking.bookingDate).toLocaleDateString()}</p>
-                    </div>
+                    <Badge className={getBookingStatusColor(booking.status)}>
+                      {booking.status}
+                    </Badge>
                   </div>
-                  <Badge className={
-                    booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                    booking.status === 'completed' ? 'bg-green-100 text-green-700' :
-                    'bg-blue-100 text-blue-700'
-                  }>
-                    {booking.status}
-                  </Badge>
-                </div>
-              )) || (
+                ))
+              ) : (
                 <div className="text-center py-8">
                   <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-2" />
                   <p className="text-gray-500">No recent bookings</p>
@@ -286,9 +331,7 @@ const ProviderDashboard = () => {
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900">
-                {dashboardData?.bookings?.total > 0 ? 
-                  Math.round((dashboardData?.bookings?.completed / dashboardData?.bookings?.total) * 100) 
-                  : 0}%
+                {calculateCompletionRate()}%
               </h3>
               <p className="text-gray-600">Completion Rate</p>
             </div>
@@ -308,7 +351,7 @@ const ProviderDashboard = () => {
                 <TrendingUp className="w-8 h-8 text-purple-600" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900">
-                {formatCurrency((dashboardData?.earnings?.total || 0) / (dashboardData?.bookings?.completed || 1))}
+                {formatCurrency(calculateAverageEarningsPerService())}
               </h3>
               <p className="text-gray-600">Avg. per Service</p>
             </div>

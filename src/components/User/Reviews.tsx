@@ -21,10 +21,8 @@ import {
   Edit, 
   Trash2, 
   MessageSquare,
-  Calendar,
   AlertTriangle,
   Filter,
-  SortDesc,
   Eye
 } from 'lucide-react';
 import { 
@@ -36,12 +34,12 @@ import {
 } from '@/components/ui/select';
 import { useUserReviews, useUpdateReview, useDeleteReview } from '@/hooks/useUserQueries';
 import { formatDate } from '@/lib/formatters';
-import { Review } from '@/domain/entities/User/Review';
+import { UserReview } from '@/domain/entities';
 
 const UserReviews = () => {
   const [page, setPage] = useState(1);
-  const [editingReview, setEditingReview] = useState<Review | null>(null);
-  const [deletingReview, setDeletingReview] = useState<Review | null>(null);
+  const [editingReview, setEditingReview] = useState<UserReview | null>(null);
+  const [deletingReview, setDeletingReview] = useState<UserReview | null>(null);
   const [filters, setFilters] = useState({
     rating: 'all', // Changed from empty string to 'all'
     sortBy: 'createdAt',
@@ -57,6 +55,7 @@ const UserReviews = () => {
     return {
       ...params,
       rating: params.rating === 'all' ? '' : params.rating,
+      sortOrder: params.sortOrder as 'asc' | 'desc',
     };
   };
 
@@ -69,7 +68,7 @@ const UserReviews = () => {
   const updateReviewMutation = useUpdateReview();
   const deleteReviewMutation = useDeleteReview();
 
-  const handleEditReview = (review: Review) => {
+  const handleEditReview = (review: UserReview) => {
     setEditingReview(review);
     setEditData({
       rating: review.rating,
@@ -90,8 +89,9 @@ const UserReviews = () => {
       });
       setEditingReview(null);
       setEditData({ rating: 5, comment: '' });
-    } catch (error) {
-      // Error is handled by the mutation
+    } catch (err) {
+      console.log('Error updating review:', err);
+      
     }
   };
 
@@ -101,7 +101,8 @@ const UserReviews = () => {
     try {
       await deleteReviewMutation.mutateAsync(deletingReview._id);
       setDeletingReview(null);
-    } catch (error) {
+    } catch (err) {
+      console.log('Error deleting review:', err);
       // Error is handled by the mutation
     }
   };
@@ -379,9 +380,10 @@ const UserReviews = () => {
               Delete Review
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete your review for "{deletingReview?.service.name}"? 
+              Are you sure you want to delete your review for &quot;{deletingReview?.service.name}&quot;?
               This action cannot be undone and will permanently remove your feedback.
             </DialogDescription>
+
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">
             <Button
@@ -406,7 +408,7 @@ const UserReviews = () => {
 };
 
 interface ReviewCardProps {
-  review: Review;
+  review: UserReview;
   onEdit: () => void;
   onDelete: () => void;
 }

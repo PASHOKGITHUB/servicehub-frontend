@@ -26,7 +26,8 @@ import {
 } from 'lucide-react';
 import { useUserBookings, useCancelBooking } from '@/hooks/useUserQueries';
 import { formatCurrency, formatDate} from '@/lib/formatters';
-import { Booking, BookingStatus } from '@/domain/entities/User/Booking';
+import { BookingStatus } from '@/domain/entities/User/Booking';
+import { UserBooking } from '@/domain/entities';
 
 const UpcomingBookings = () => {
   const [page, setPage] = useState(1);
@@ -53,25 +54,24 @@ const UpcomingBookings = () => {
       });
       setCancellingBooking(null);
       setCancelReason('');
-    } catch (error) {
-      // Error is handled by the mutation
-    }
+    } catch (err) {
+        console.error('Failed to cancel Booking:', err);    }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800';
-      case 'in_progress':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // const getStatusColor = (status: string) => {
+  //   switch (status) {
+  //     case 'pending':
+  //       return 'bg-yellow-100 text-yellow-800';
+  //     case 'confirmed':
+  //       return 'bg-blue-100 text-blue-800';
+  //     case 'in_progress':
+  //       return 'bg-green-100 text-green-800';
+  //     default:
+  //       return 'bg-gray-100 text-gray-800';
+  //   }
+  // };
 
-  const canCancelBooking = (booking: Booking) => {
+  const canCancelBooking = (booking: UserBooking) => {
     const bookingDate = new Date(booking.bookingDate);
     const now = new Date();
     const hoursDiff = (bookingDate.getTime() - now.getTime()) / (1000 * 60 * 60);
@@ -214,7 +214,7 @@ const UpcomingBookings = () => {
 };
 
 interface BookingCardProps {
-  booking: Booking;
+  booking: UserBooking;
   onCancel: () => void;
   canCancel: boolean;
 }

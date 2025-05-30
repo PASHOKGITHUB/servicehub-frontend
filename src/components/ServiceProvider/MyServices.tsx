@@ -47,15 +47,40 @@ import {
 } from '@/hooks/useProviderQueries';
 import { toast } from 'sonner';
 
+// Import the existing type definitions
+import type { 
+  ProviderService,
+  CreateServiceRequest,
+  UpdateServiceRequest,
+  ProviderServicesParams
+} from '@/domain/entities/Provider/Provider';
+
+// Additional interfaces for component state
+interface ServiceCategory {
+  _id: string;
+  name: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+interface ServiceCategoriesResponse {
+  categories: ServiceCategory[];
+}
+
+interface CreateServiceFormData extends Omit<CreateServiceRequest, 'serviceAreas' | 'tags'> {
+  serviceAreas: string[];
+  tags: string[];
+}
+
 const MyServices = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingService, setEditingService] = useState<any>(null);
-  const [currentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
+  const [editingService, setEditingService] = useState<ProviderService | null>(null);
+  const [currentPage] = useState<number>(1);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CreateServiceFormData>({
     name: '',
     description: '',
     category: '',
@@ -65,19 +90,21 @@ const MyServices = () => {
     tags: ['']
   });
 
-  const { data: servicesData, isLoading } = useProviderServices({
+  // Query parameters with proper typing
+  const servicesQueryParams: ProviderServicesParams = {
     page: currentPage,
     limit: 12,
     search: searchTerm || undefined,
     category: selectedCategory === 'all' ? undefined : selectedCategory,
-  });
+  };
 
-  const { data: categoriesData } = useServiceCategories();
+  const { data: servicesData, isLoading } = useProviderServices(servicesQueryParams);
+  const { data: categoriesData } = useServiceCategories() as { data?: ServiceCategoriesResponse };
   const createServiceMutation = useCreateService();
   const updateServiceMutation = useUpdateService();
   const deleteServiceMutation = useDeleteService();
 
-  const handleCreate = async () => {
+  const handleCreate = async (): Promise<void> => {
     if (!formData.name || !formData.description || !formData.category || formData.price <= 0) {
       toast.error('Please fill in all required fields');
       return;
@@ -86,20 +113,33 @@ const MyServices = () => {
     const serviceAreas = formData.serviceAreas.filter(area => area.trim() !== '');
     const tags = formData.tags.filter(tag => tag.trim() !== '');
 
+    if (serviceAreas.length === 0) {
+      toast.error('Please add at least one service area');
+      return;
+    }
+
+    const createRequest: CreateServiceRequest = {
+      name: formData.name,
+      description: formData.description,
+      category: formData.category,
+      price: formData.price,
+      duration: formData.duration,
+      serviceAreas,
+      tags: tags.length > 0 ? tags : undefined
+    };
+
     try {
-      await createServiceMutation.mutateAsync({
-        ...formData,
-        serviceAreas,
-        tags
-      });
+      await createServiceMutation.mutateAsync(createRequest);
       setIsCreateDialogOpen(false);
       resetForm();
+      toast.success('Service created successfully');
     } catch (error) {
       console.error('Create failed:', error);
+      toast.error('Failed to create service');
     }
   };
 
-  const handleEdit = (service: any) => {
+  const handleEdit = (service: ProviderService): void => {
     setEditingService(service);
     setFormData({
       name: service.name,
@@ -113,51 +153,69 @@ const MyServices = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdate = async () => {
+  const handleUpdate = async (): Promise<void> => {
     if (!editingService) return;
 
     const serviceAreas = formData.serviceAreas.filter(area => area.trim() !== '');
     const tags = formData.tags.filter(tag => tag.trim() !== '');
 
+    if (serviceAreas.length === 0) {
+      toast.error('Please add at least one service area');
+      return;
+    }
+
+    const updateRequest: UpdateServiceRequest = {
+      id: editingService._id,
+      data: {
+        name: formData.name,
+        description: formData.description,
+        price: formData.price,
+        duration: formData.duration,
+        serviceAreas,
+        tags
+      }
+    };
+
     try {
-      await updateServiceMutation.mutateAsync({
-        id: editingService._id,
-        data: {
-          ...formData,
-          serviceAreas,
-          tags
-        }
-      });
+      await updateServiceMutation.mutateAsync(updateRequest);
       setIsEditDialogOpen(false);
       setEditingService(null);
       resetForm();
+      toast.success('Service updated successfully');
     } catch (error) {
       console.error('Update failed:', error);
+      toast.error('Failed to update service');
     }
   };
 
-  const handleToggleStatus = async (service: any) => {
+  const handleToggleStatus = async (service: ProviderService): Promise<void> => {
+    const updateRequest: UpdateServiceRequest = {
+      id: service._id,
+      data: { isActive: !service.isActive }
+    };
+
     try {
-      await updateServiceMutation.mutateAsync({
-        id: service._id,
-        data: { isActive: !service.isActive }
-      });
+      await updateServiceMutation.mutateAsync(updateRequest);
+      toast.success(`Service ${!service.isActive ? 'activated' : 'deactivated'} successfully`);
     } catch (error) {
       console.error('Status toggle failed:', error);
+      toast.error('Failed to update service status');
     }
   };
 
-  const handleDelete = async (serviceId: string) => {
+  const handleDelete = async (serviceId: string): Promise<void> => {
     if (window.confirm('Are you sure you want to delete this service? This action cannot be undone.')) {
       try {
         await deleteServiceMutation.mutateAsync(serviceId);
+        toast.success('Service deleted successfully');
       } catch (error) {
         console.error('Delete failed:', error);
+        toast.error('Failed to delete service');
       }
     }
   };
 
-   const resetForm = () => {
+  const resetForm = (): void => {
     setFormData({
       name: '',
       description: '',
@@ -169,47 +227,156 @@ const MyServices = () => {
     });
   };
 
-  const addServiceArea = () => {
+  const addServiceArea = (): void => {
     setFormData({ ...formData, serviceAreas: [...formData.serviceAreas, ''] });
   };
 
-  const removeServiceArea = (index: number) => {
+  const removeServiceArea = (index: number): void => {
     setFormData({ 
       ...formData, 
       serviceAreas: formData.serviceAreas.filter((_, i) => i !== index) 
     });
   };
 
-  const updateServiceArea = (index: number, value: string) => {
+  const updateServiceArea = (index: number, value: string): void => {
     const newAreas = [...formData.serviceAreas];
     newAreas[index] = value;
     setFormData({ ...formData, serviceAreas: newAreas });
   };
 
-  const addTag = () => {
+  const addTag = (): void => {
     setFormData({ ...formData, tags: [...formData.tags, ''] });
   };
 
-  const removeTag = (index: number) => {
+  const removeTag = (index: number): void => {
     setFormData({ 
       ...formData, 
       tags: formData.tags.filter((_, i) => i !== index) 
     });
   };
 
-  const updateTag = (index: number, value: string) => {
+  const updateTag = (index: number, value: string): void => {
     const newTags = [...formData.tags];
     newTags[index] = value;
     setFormData({ ...formData, tags: newTags });
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
     }).format(amount);
   };
+
+  const renderServiceForm = (isEdit: boolean = false) => (
+    <div className="space-y-4 max-h-96 overflow-y-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor={isEdit ? "edit-name" : "name"}>Service Name *</Label>
+          <Input
+            id={isEdit ? "edit-name" : "name"}
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder="e.g., Home Cleaning Service"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor={isEdit ? "edit-category" : "category"}>Category *</Label>
+          <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categoriesData?.categories?.map((category: ServiceCategory) => (
+                <SelectItem key={category._id} value={category._id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      
+      <div>
+        <Label htmlFor={isEdit ? "edit-description" : "description"}>Description *</Label>
+        <Textarea
+          id={isEdit ? "edit-description" : "description"}
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          placeholder="Describe your service in detail"
+          rows={3}
+        />
+      </div>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor={isEdit ? "edit-price" : "price"}>Price (₹) *</Label>
+          <Input
+            id={isEdit ? "edit-price" : "price"}
+            type="number"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+            placeholder="500"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor={isEdit ? "edit-duration" : "duration"}>Duration (minutes) *</Label>
+          <Input
+            id={isEdit ? "edit-duration" : "duration"}
+            type="number"
+            value={formData.duration}
+            onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })}
+            placeholder="60"
+          />
+        </div>
+      </div>
+      
+      <div>
+        <Label>Service Areas *</Label>
+        {formData.serviceAreas.map((area, index) => (
+          <div key={index} className="flex gap-2 mt-2">
+            <Input
+              value={area}
+              onChange={(e) => updateServiceArea(index, e.target.value)}
+              placeholder="e.g., Chennai, Madurai"
+            />
+            {formData.serviceAreas.length > 1 && (
+              <Button type="button" variant="outline" size="sm" onClick={() => removeServiceArea(index)}>
+                Remove
+              </Button>
+            )}
+          </div>
+        ))}
+        <Button type="button" variant="outline" size="sm" onClick={addServiceArea} className="mt-2">
+          Add Area
+        </Button>
+      </div>
+      
+      <div>
+        <Label>Tags (Optional)</Label>
+        {formData.tags.map((tag, index) => (
+          <div key={index} className="flex gap-2 mt-2">
+            <Input
+              value={tag}
+              onChange={(e) => updateTag(index, e.target.value)}
+              placeholder="e.g., cleaning, professional"
+            />
+            {formData.tags.length > 1 && (
+              <Button type="button" variant="outline" size="sm" onClick={() => removeTag(index)}>
+                Remove
+              </Button>
+            )}
+          </div>
+        ))}
+        <Button type="button" variant="outline" size="sm" onClick={addTag} className="mt-2">
+          Add Tag
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
@@ -240,112 +407,7 @@ const MyServices = () => {
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name">Service Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g., Home Cleaning Service"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="category">Category *</Label>
-                    <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoriesData?.categories?.map((category: any) => (
-                          <SelectItem key={category._id} value={category._id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div>
-                  <Label htmlFor="description">Description *</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Describe your service in detail"
-                    rows={3}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="price">Price (₹) *</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                      placeholder="500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="duration">Duration (minutes) *</Label>
-                    <Input
-                      id="duration"
-                      type="number"
-                      value={formData.duration}
-                      onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })}
-                      placeholder="60"
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <Label>Service Areas *</Label>
-                  {formData.serviceAreas.map((area, index) => (
-                    <div key={index} className="flex gap-2 mt-2">
-                      <Input
-                        value={area}
-                        onChange={(e) => updateServiceArea(index, e.target.value)}
-                        placeholder="e.g., Chennai, Madurai"
-                      />
-                      {formData.serviceAreas.length > 1 && (
-                        <Button type="button" variant="outline" size="sm" onClick={() => removeServiceArea(index)}>
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" size="sm" onClick={addServiceArea} className="mt-2">
-                    Add Area
-                  </Button>
-                </div>
-                
-                <div>
-                  <Label>Tags (Optional)</Label>
-                  {formData.tags.map((tag, index) => (
-                    <div key={index} className="flex gap-2 mt-2">
-                      <Input
-                        value={tag}
-                        onChange={(e) => updateTag(index, e.target.value)}
-                        placeholder="e.g., cleaning, professional"
-                      />
-                      {formData.tags.length > 1 && (
-                        <Button type="button" variant="outline" size="sm" onClick={() => removeTag(index)}>
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button type="button" variant="outline" size="sm" onClick={addTag} className="mt-2">
-                    Add Tag
-                  </Button>
-                </div>
-              </div>
+              {renderServiceForm(false)}
               
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
@@ -383,7 +445,7 @@ const MyServices = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categoriesData?.categories?.map((category: any) => (
+                {categoriesData?.categories?.map((category: ServiceCategory) => (
                   <SelectItem key={category._id} value={category._id}>
                     {category.name}
                   </SelectItem>
@@ -407,7 +469,7 @@ const MyServices = () => {
             </Card>
           ))
         ) : (
-          servicesData?.services?.map((service: any) => (
+          servicesData?.services?.map((service: ProviderService) => (
             <Card key={service._id} className="border border-gray-200 shadow-sm rounded-2xl hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
@@ -526,89 +588,7 @@ const MyServices = () => {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 max-h-96 overflow-y-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-name">Service Name *</Label>
-                <Input
-                  id="edit-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Home Cleaning Service"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-category">Category *</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categoriesData?.categories?.map((category: any) => (
-                      <SelectItem key={category._id} value={category._id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="edit-description">Description *</Label>
-              <Textarea
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe your service in detail"
-                rows={3}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-price">Price (₹) *</Label>
-                <Input
-                  id="edit-price"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-duration">Duration (minutes) *</Label>
-                <Input
-                  id="edit-duration"
-                  type="number"
-                  value={formData.duration}
-                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })}
-                />
-              </div>
-            </div>
-            
-            <div>
-              <Label>Service Areas *</Label>
-              {formData.serviceAreas.map((area, index) => (
-                <div key={index} className="flex gap-2 mt-2">
-                  <Input
-                    value={area}
-                    onChange={(e) => updateServiceArea(index, e.target.value)}
-                    placeholder="e.g., Chennai, Madurai"
-                  />
-                  {formData.serviceAreas.length > 1 && (
-                    <Button type="button" variant="outline" size="sm" onClick={() => removeServiceArea(index)}>
-                      Remove
-                    </Button>
-                  )}
-                </div>
-              ))}
-              <Button type="button" variant="outline" size="sm" onClick={addServiceArea} className="mt-2">
-                Add Area
-              </Button>
-            </div>
-          </div>
+          {renderServiceForm(true)}
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>

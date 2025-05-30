@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,49 +28,143 @@ import {
 import { useAdminUsers, useUpdateUserStatus } from '@/hooks/useAdminQueries';
 import { toast } from 'sonner';
 
-const UserManagement = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRole, setSelectedRole] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
+// User role enum
+enum UserRole {
+  ADMIN = 'admin',
+  PROVIDER = 'provider',
+  USER = 'user'
+}
+
+// User interface for admin management
+interface AdminUser {
+  _id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
+  role: UserRole;
+  isActive: boolean;
+  isEmailVerified: boolean;
+  isPhoneVerified?: boolean;
+  lastLogin?: string;
+  createdAt: string;
+  updatedAt: string;
   
-  const { data: usersData, isLoading } = useAdminUsers({
+  // Additional user stats (optional)
+  totalBookings?: number;
+  totalSpent?: number;
+  registrationSource?: string;
+}
+
+// Pagination interface
+interface PaginationMeta {
+  current: number;
+  total: number;
+  count: number;
+  limit: number;
+}
+
+// Admin users response interface
+interface AdminUsersResponse {
+  users: AdminUser[];
+  pagination: PaginationMeta;
+}
+
+// Admin users query parameters
+interface AdminUsersParams {
+  page: number;
+  limit: number;
+  role?: string;
+  search?: string;
+  isActive?: boolean;
+}
+
+// Update user status request
+interface UpdateUserStatusRequest {
+  userId: string;
+  isActive: boolean;
+  reason: string;
+}
+
+// Role badge variant type
+type RoleBadgeVariant = 'admin' | 'provider' | 'user';
+
+const UserManagement: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  
+  // Query parameters with proper typing
+  const queryParams: AdminUsersParams = {
     page: currentPage,
     limit: 10,
     role: selectedRole === 'all' ? undefined : selectedRole,
     search: searchTerm || undefined,
     isActive: selectedStatus === 'all' ? undefined : selectedStatus === 'active',
-  });
+  };
+
+  const { data: usersData, isLoading } = useAdminUsers(queryParams) as {
+    data?: AdminUsersResponse;
+    isLoading: boolean;
+  };
 
   const updateUserStatusMutation = useUpdateUserStatus();
 
-  const handleStatusToggle = async (userId: string, currentStatus: boolean) => {
+  const handleStatusToggle = async (userId: string, currentStatus: boolean): Promise<void> => {
+    const updateRequest: UpdateUserStatusRequest = {
+      userId,
+      isActive: !currentStatus,
+      reason: !currentStatus ? 'Activated by admin' : 'Deactivated by admin'
+    };
+
     try {
-      await updateUserStatusMutation.mutateAsync({
-        userId,
-        isActive: !currentStatus,
-        reason: !currentStatus ? 'Activated by admin' : 'Deactivated by admin'
-      });
+      await updateUserStatusMutation.mutateAsync(updateRequest);
+      toast.success(`User ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
     } catch (error) {
       console.error('Status update failed:', error);
+      toast.error('Failed to update user status');
     }
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string): string => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const getRoleBadge = (role: string) => {
-    const variants = {
+  const getRoleBadge = (role: string): string => {
+    const variants: Record<RoleBadgeVariant, string> = {
       admin: 'bg-red-100 text-red-700',
       provider: 'bg-blue-100 text-blue-700',
       user: 'bg-green-100 text-green-700'
     };
-    return variants[role as keyof typeof variants] || variants.user;
+    return variants[role as RoleBadgeVariant] || variants.user;
+  };
+
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const handleViewDetails = (userId: string): void => {
+    toast.info('View details coming soon');
+    // TODO: Navigate to user details page
+    console.log('View details for user:', userId);
+  };
+
+  const getRoleDisplayName = (role: string): string => {
+    const roleNames: Record<string, string> = {
+      admin: 'Admin',
+      provider: 'Provider',
+      user: 'Customer'
+    };
+    return roleNames[role] || role;
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
@@ -114,7 +208,7 @@ const UserManagement = () => {
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
-               </Select>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -145,7 +239,7 @@ const UserManagement = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {usersData?.users?.map((user: any) => (
+              {usersData?.users?.map((user: AdminUser) => (
                 <div key={user._id} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
                   <div className="flex items-center space-x-4 flex-1 min-w-0">
                     <Avatar className="w-12 h-12">
@@ -159,7 +253,7 @@ const UserManagement = () => {
                       <div className="flex items-center space-x-2 mb-1">
                         <h3 className="font-semibold text-gray-900 truncate">{user.name}</h3>
                         <Badge className={getRoleBadge(user.role)}>
-                          {user.role}
+                          {getRoleDisplayName(user.role)}
                         </Badge>
                         {user.isEmailVerified && (
                           <Badge variant="outline" className="text-green-600 border-green-600">
@@ -182,9 +276,16 @@ const UserManagement = () => {
                         )}
                         <div className="flex items-center space-x-1">
                           <Calendar className="w-4 h-4" />
-                          <span>{new Date(user.createdAt).toLocaleDateString()}</span>
+                          <span>{formatDate(user.createdAt)}</span>
                         </div>
                       </div>
+
+                      {/* Additional user info */}
+                      {user.lastLogin && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Last login: {formatDate(user.lastLogin)}
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -221,7 +322,7 @@ const UserManagement = () => {
                             </>
                           )}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info('View details coming soon')}>
+                        <DropdownMenuItem onClick={() => handleViewDetails(user._id)}>
                           <Shield className="w-4 h-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
@@ -253,6 +354,7 @@ const UserManagement = () => {
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
+                  className="border-[#1EC6D9] text-[#1EC6D9] hover:bg-[#1EC6D9] hover:text-white"
                 >
                   Previous
                 </Button>
@@ -261,6 +363,7 @@ const UserManagement = () => {
                   size="sm"
                   onClick={() => setCurrentPage(prev => prev + 1)}
                   disabled={currentPage >= usersData.pagination.total}
+                  className="border-[#1EC6D9] text-[#1EC6D9] hover:bg-[#1EC6D9] hover:text-white"
                 >
                   Next
                 </Button>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,37 +29,98 @@ import {
 import { useAdminProviders, useUpdateUserStatus } from '@/hooks/useAdminQueries';
 import { toast } from 'sonner';
 
-const ProviderManagement = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
+// Provider interface for admin management
+interface AdminProvider {
+  _id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
+  isActive: boolean;
+  isEmailVerified: boolean;
+  isPhoneVerified?: boolean;
+  createdAt: string;
+  updatedAt: string;
   
-  const { data: providersData, isLoading } = useAdminProviders({
+  // Provider-specific stats
+  servicesCount?: number;
+  totalEarnings?: number;
+  totalBookings?: number;
+  averageRating?: number;
+  completedBookings?: number;
+  pendingBookings?: number;
+}
+
+// Pagination interface
+interface PaginationMeta {
+  current: number;
+  total: number;
+  count: number;
+  limit: number;
+}
+
+// Admin providers response interface
+interface AdminProvidersResponse {
+  providers: AdminProvider[];
+  pagination: PaginationMeta;
+}
+
+// Admin providers query parameters
+interface AdminProvidersParams {
+  page: number;
+  limit: number;
+  search?: string;
+  isActive?: boolean;
+}
+
+// Update user status request
+interface UpdateUserStatusRequest {
+  userId: string;
+  isActive: boolean;
+  reason: string;
+}
+
+const ProviderManagement: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  
+  // Query parameters with proper typing
+  const queryParams: AdminProvidersParams = {
     page: currentPage,
     limit: 10,
     search: searchTerm || undefined,
     isActive: selectedStatus === 'all' ? undefined : selectedStatus === 'active',
-  });
+  };
+
+  const { data: providersData, isLoading } = useAdminProviders(queryParams) as {
+    data?: AdminProvidersResponse;
+    isLoading: boolean;
+  };
 
   const updateUserStatusMutation = useUpdateUserStatus();
 
-  const handleStatusToggle = async (userId: string, currentStatus: boolean) => {
+  const handleStatusToggle = async (userId: string, currentStatus: boolean): Promise<void> => {
+    const updateRequest: UpdateUserStatusRequest = {
+      userId,
+      isActive: !currentStatus,
+      reason: !currentStatus ? 'Provider activated by admin' : 'Provider deactivated by admin'
+    };
+
     try {
-      await updateUserStatusMutation.mutateAsync({
-        userId,
-        isActive: !currentStatus,
-        reason: !currentStatus ? 'Provider activated by admin' : 'Provider deactivated by admin'
-      });
+      await updateUserStatusMutation.mutateAsync(updateRequest);
+      toast.success(`Provider ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
     } catch (error) {
       console.error('Status update failed:', error);
+      toast.error('Failed to update provider status');
     }
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string): string => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
@@ -67,8 +128,28 @@ const ProviderManagement = () => {
     }).format(amount);
   };
 
+  const formatDate = (dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const handleViewDetails = (providerId: string): void => {
+    toast.info('View details coming soon');
+    // TODO: Navigate to provider details page
+    console.log('View details for provider:', providerId);
+  };
+
+  const handleViewServices = (providerId: string): void => {
+    toast.info('View services coming soon');
+    // TODO: Navigate to provider services page
+    console.log('View services for provider:', providerId);
+  };
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
@@ -132,7 +213,7 @@ const ProviderManagement = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {providersData?.providers?.map((provider: any) => (
+              {providersData?.providers?.map((provider: AdminProvider) => (
                 <div key={provider._id} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
                   <div className="flex items-center space-x-4 flex-1 min-w-0">
                     <Avatar className="w-12 h-12">
@@ -169,7 +250,7 @@ const ProviderManagement = () => {
                         )}
                         <div className="flex items-center space-x-1">
                           <Calendar className="w-4 h-4" />
-                          <span>{new Date(provider.createdAt).toLocaleDateString()}</span>
+                          <span>{formatDate(provider.createdAt)}</span>
                         </div>
                       </div>
 
@@ -220,11 +301,11 @@ const ProviderManagement = () => {
                         >
                           {provider.isActive ? 'Deactivate Provider' : 'Activate Provider'}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info('View details coming soon')}>
+                        <DropdownMenuItem onClick={() => handleViewDetails(provider._id)}>
                           <Shield className="w-4 h-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info('View services coming soon')}>
+                        <DropdownMenuItem onClick={() => handleViewServices(provider._id)}>
                           <Package className="w-4 h-4 mr-2" />
                           View Services
                         </DropdownMenuItem>
@@ -256,6 +337,7 @@ const ProviderManagement = () => {
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
+                  className="border-[#1EC6D9] text-[#1EC6D9] hover:bg-[#1EC6D9] hover:text-white"
                 >
                   Previous
                 </Button>
@@ -264,6 +346,7 @@ const ProviderManagement = () => {
                   size="sm"
                   onClick={() => setCurrentPage(prev => prev + 1)}
                   disabled={currentPage >= providersData.pagination.total}
+                  className="border-[#1EC6D9] text-[#1EC6D9] hover:bg-[#1EC6D9] hover:text-white"
                 >
                   Next
                 </Button>
@@ -275,4 +358,5 @@ const ProviderManagement = () => {
     </div>
   );
 };
+
 export default ProviderManagement;

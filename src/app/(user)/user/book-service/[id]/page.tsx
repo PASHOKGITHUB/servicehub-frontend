@@ -1,25 +1,25 @@
 import { Metadata } from 'next';
-import ServiceDetails from '@/components/User/ServiceDetails';
+import BookService from '@/components/User/BookService';
 import ProtectedRoute from '@/components/Common/ProtectedRoute';
 
 export const metadata: Metadata = {
-  title: 'Service Details - ServiceHub',
-  description: 'View service details and book your appointment',
+  title: 'Book Service - ServiceHub',
+  description: 'Complete your service booking with secure payment',
 };
 
-interface ServiceDetailsPageProps {
+interface BookServicePageProps {
   params: Promise<{
     id: string;
   }>;
 }
 
-export default async function ServiceDetailsPage({ params }: ServiceDetailsPageProps) {
+export default async function BookServicePage({ params }: BookServicePageProps) {
   // Await the params before using
   const { id } = await params;
   
   return (
     <ProtectedRoute allowedRoles={['user']} requireEmailVerification={true}>
-      <ServiceDetails serviceId={id} />
+      <BookService serviceId={id} />
     </ProtectedRoute>
   );
 }
