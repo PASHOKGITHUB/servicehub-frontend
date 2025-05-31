@@ -1,6 +1,11 @@
+// =====================================================
+// src/components/User/Browse.tsx - FIXED VERSION
+// =====================================================
+
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +49,15 @@ const Browse = () => {
 
   const { data: servicesData, isLoading } = useBrowseServices(apiParams);
 
+  const handleCategoryChange = (value: string) => {
+    const categoryValue = value === 'all' ? '' : value;
+    setFilters({ ...filters, category: categoryValue, page: 1 });
+  };
+
+  const handleRatingChange = (value: string) => {
+    const ratingValue = value === 'all' ? '' : value;
+    setFilters({ ...filters, rating: ratingValue, page: 1 });
+  };
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -67,12 +81,15 @@ const Browse = () => {
               />
             </div>
             
-            <Select value={filters.category} onValueChange={(value) => setFilters({ ...filters, category: value, page: 1 })}>
+            <Select 
+              value={filters.category || 'all'} 
+              onValueChange={handleCategoryChange}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {servicesData?.filters?.categories?.map((category: ServiceCategory) => (
                   <SelectItem key={category._id} value={category._id}>
                     {category.name}
@@ -81,18 +98,24 @@ const Browse = () => {
               </SelectContent>
             </Select>
 
-            <Select value={filters.rating} onValueChange={(value) => setFilters({ ...filters, rating: value, page: 1 })}>
+            <Select 
+              value={filters.rating || 'all'} 
+              onValueChange={handleRatingChange}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Rating" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Ratings</SelectItem>
+                <SelectItem value="all">All Ratings</SelectItem>
                 <SelectItem value="4">4+ Stars</SelectItem>
                 <SelectItem value="3">3+ Stars</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={filters.sortBy} onValueChange={(value) => setFilters({ ...filters, sortBy: value, page: 1 })}>
+            <Select 
+              value={filters.sortBy} 
+              onValueChange={(value) => setFilters({ ...filters, sortBy: value, page: 1 })}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
@@ -126,17 +149,49 @@ const Browse = () => {
           ))}
         </div>
       )}
+
+      {/* No results message */}
+      {!isLoading && servicesData?.services?.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-gray-500 text-lg">No services found matching your criteria.</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => setFilters({
+              category: '',
+              rating: '',
+              page: 1,
+              limit: 12,
+              search: '',
+              minPrice: '',
+              maxPrice: '',
+              city: '',
+              sortBy: 'createdAt',
+              sortOrder: 'desc'
+            })}
+          >
+            Clear Filters
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
 
 const ServiceCard = ({ service }: ServiceCardProps) => {
+  const router = useRouter();
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  // FIXED: Navigate to service details page first (not directly to booking)
+  const handleViewDetails = () => {
+    router.push(`/user/services/${service._id}`);
   };
 
   return (
@@ -163,7 +218,10 @@ const ServiceCard = ({ service }: ServiceCardProps) => {
             <span className="text-lg font-bold text-primary">
               {formatCurrency(service.price)}
             </span>
-            <Button size="sm">Book Now</Button>
+            {/* FIXED: Changed from "Book Now" to "View Details" and navigate to service details */}
+            <Button size="sm" onClick={handleViewDetails}>
+              View Details
+            </Button>
           </div>
         </div>
       </CardContent>
